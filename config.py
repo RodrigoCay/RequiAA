@@ -13,10 +13,10 @@ from pathlib import Path
 # ARCHIVO EXCEL
 # =========================================================
 
-EXCEL_FILE = Path(
-    r"C:\Users\rcayuleo\OneDrive - Transformadores Tusan SA\Archivos de Claudia Muñoz Farias EXT - Proceso de compras\Prueba.xlsx"
-)
-
+BASE_DIR = Path(__file__).parent
+ 
+EXCEL_FILE = BASE_DIR / "Prueba.xlsx"
+ 
 SHEET_NAME = "Tabla Control"
 
 # =========================================================
