@@ -10,7 +10,7 @@ Archivo de configuración
 from pathlib import Path
 
 # =========================================================
-# ARCHIVO EXCEL
+# ARCHIVO EXC
 # =========================================================
 
 BASE_DIR = Path(__file__).parent
