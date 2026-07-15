@@ -7,9 +7,8 @@ Created on Thu Jul  9 17:49:16 2026
 
 """
 =========================================================
-DASHBOARD DE COMPRAS
-Versión 2.0
-Autor: Rodrigo Cayuleo
+Seguimiento  de compras Apoyo activo y INGECAF
+Versión 1.0
 =========================================================
 """
 
