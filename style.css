@@ -1,95 +1,107 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jul  9 17:42:34 2026
-
-@author: rcayuleo
-"""
-
 /* ==========================================================
-   DASHBOARD COMPRAS - TEMA OSCURO
+   DASHBOARD COMPRAS - TEMA OSCURO (v2 - anti forced-dark-mode)
+   ==========================================================
+   Cambios clave respecto a la versión original:
+   - color-scheme: dark en html/body para que el navegador SEPA
+     que la página ya es oscura y no intente "corregirla".
+   - Se evitan negro puro (#000000) y blanco puro (#FFFFFF) en
+     fondos/textos grandes: los extremos absolutos son los que
+     más gatillan el auto-dark-mode / forced-colors de Edge y
+     Chrome. Se usan #0B0D10 y #F2F3F5 en su lugar.
+   - Selectores duplicados para data-testid viejos y nuevos de
+     Streamlit (metric-container / stMetric), por si la versión
+     de Streamlit cambió el markup.
+   - Bloque @media (forced-colors: active) para modo alto
+     contraste de Windows.
 ========================================================== */
+
+:root{
+  color-scheme: dark;
+  --bg: #0B0D10;
+  --bg-sidebar: #14171A;
+  --bg-card: #1B1F23;
+  --border: #2E3338;
+  --accent: #00B4D8;
+  --accent-hover: #0288D1;
+  --text: #F2F3F5;
+  --text-muted: #ADB3B9;
+  --ok: #2ECC71;
+  --warn: #FFC107;
+  --error: #FF5252;
+}
 
 html,
 body,
 [class*="css"] {
-    background-color: #000000;
-    color: #FFFFFF;
+    background-color: var(--bg);
+    color: var(--text);
     font-family: "Segoe UI", sans-serif;
+    color-scheme: dark;
 }
 
 /* Fondo principal */
 .stApp {
-    background-color: #000000;
+    background-color: var(--bg);
+    color-scheme: dark;
 }
 
 /* Sidebar */
 section[data-testid="stSidebar"] {
-    background-color: #111111;
-    border-right: 1px solid #2E2E2E;
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
 }
 
 /* Títulos */
 h1 {
-    color: #00B4D8 !important;
+    color: var(--accent) !important;
     font-size: 38px !important;
     font-weight: 700 !important;
 }
 
-h2,h3,h4 {
-    color: white !important;
+h2, h3, h4 {
+    color: var(--text) !important;
 }
 
 /* Separadores */
 hr {
-    border: 1px solid #2F2F2F;
+    border: 1px solid var(--border);
 }
 
 /* ============================
-   TARJETAS KPI
+   TARJETAS KPI (soporta ambos testid de Streamlit)
 ============================ */
 
-div[data-testid="metric-container"]{
-
-    background:#181818;
-
-    border:1px solid #2D2D2D;
-
-    padding:18px;
-
-    border-radius:12px;
-
-    box-shadow:0px 0px 15px rgba(0,0,0,.45);
-
-    transition:0.3s;
-
+div[data-testid="metric-container"],
+div[data-testid="stMetric"]{
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0px 0px 15px rgba(0,0,0,.45);
+    transition: 0.3s;
 }
 
-div[data-testid="metric-container"]:hover{
+div[data-testid="metric-container"]:hover,
+div[data-testid="stMetric"]:hover{
+    border: 1px solid var(--accent);
+    transform: translateY(-3px);
+}
 
-    border:1px solid #00B4D8;
-
-    transform:translateY(-3px);
-
+/* Label KPI */
+div[data-testid="metric-container"] label,
+div[data-testid="stMetric"] label,
+div[data-testid="stMetricLabel"]{
+    color: var(--text-muted) !important;
+    font-size: 14px;
 }
 
 /* Valor KPI */
-
-div[data-testid="metric-container"] label{
-
-    color:#AFAFAF !important;
-
-    font-size:14px;
-
-}
-
-div[data-testid="metric-container"] p{
-
-    color:white !important;
-
-    font-size:28px;
-
-    font-weight:bold;
-
+div[data-testid="metric-container"] p,
+div[data-testid="stMetric"] p,
+div[data-testid="stMetricValue"]{
+    color: var(--text) !important;
+    font-size: 28px;
+    font-weight: bold;
 }
 
 /* ============================
@@ -97,27 +109,17 @@ div[data-testid="metric-container"] p{
 ============================ */
 
 .stButton button{
-
-    width:100%;
-
-    background:#00B4D8;
-
-    color:white;
-
-    border-radius:10px;
-
-    border:none;
-
-    font-weight:bold;
-
-    height:42px;
-
+    width: 100%;
+    background: var(--accent);
+    color: var(--text);
+    border-radius: 10px;
+    border: none;
+    font-weight: bold;
+    height: 42px;
 }
 
 .stButton button:hover{
-
-    background:#0288D1;
-
+    background: var(--accent-hover);
 }
 
 /* ============================
@@ -125,11 +127,8 @@ div[data-testid="metric-container"] p{
 ============================ */
 
 div[data-baseweb="select"]{
-
-    background:#202020;
-
-    border-radius:8px;
-
+    background: var(--bg-card);
+    border-radius: 8px;
 }
 
 /* ============================
@@ -137,11 +136,8 @@ div[data-baseweb="select"]{
 ============================ */
 
 input{
-
-    background:#202020 !important;
-
-    color:white !important;
-
+    background: var(--bg-card) !important;
+    color: var(--text) !important;
 }
 
 /* ============================
@@ -149,11 +145,8 @@ input{
 ============================ */
 
 [data-testid="stDataFrame"]{
-
-    border:1px solid #2C2C2C;
-
-    border-radius:10px;
-
+    border: 1px solid var(--border);
+    border-radius: 10px;
 }
 
 /* ============================
@@ -161,175 +154,95 @@ input{
 ============================ */
 
 button[data-baseweb="tab"]{
-
-    background:#181818;
-
-    color:white;
-
-    border-radius:8px;
-
+    background: var(--bg-card);
+    color: var(--text);
+    border-radius: 8px;
 }
 
 button[data-baseweb="tab"][aria-selected="true"]{
-
-    background:#00B4D8;
-
+    background: var(--accent);
 }
 
 /* ============================
    ALERTAS
 ============================ */
 
-.stSuccess{
-
-    border-radius:10px;
-
-}
-
-.stWarning{
-
-    border-radius:10px;
-
-}
-
-.stError{
-
-    border-radius:10px;
-
-}
+.stSuccess{ border-radius: 10px; }
+.stWarning{ border-radius: 10px; }
+.stError{ border-radius: 10px; }
 
 /* ============================
    SCROLLBAR
 ============================ */
 
-::-webkit-scrollbar{
-
-    width:10px;
-
-}
-
-::-webkit-scrollbar-track{
-
-    background:#111111;
-
-}
-
-::-webkit-scrollbar-thumb{
-
-    background:#3A3A3A;
-
-    border-radius:10px;
-
-}
-
-::-webkit-scrollbar-thumb:hover{
-
-    background:#00B4D8;
-
-}
+::-webkit-scrollbar{ width: 10px; }
+::-webkit-scrollbar-track{ background: var(--bg-sidebar); }
+::-webkit-scrollbar-thumb{ background: #3A3F45; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover{ background: var(--accent); }
 
 /* ============================
    EXPANDER
 ============================ */
 
 details{
-
-    background:#181818;
-
-    border-radius:8px;
-
-    border:1px solid #2F2F2F;
-
-    padding:8px;
-
+    background: var(--bg-card);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    padding: 8px;
 }
 
 /* ============================
    LINKS
 ============================ */
 
-a{
-
-    color:#00B4D8 !important;
-
-}
+a{ color: var(--accent) !important; }
 
 /* ============================
    PIE DE PÁGINA
 ============================ */
 
-footer{
-
-    visibility:hidden;
-
-}
-
-header{
-
-    visibility:hidden;
-
-}
+footer{ visibility: hidden; }
+header{ visibility: hidden; }
 
 /* ============================
    TARJETAS PERSONALIZADAS
 ============================ */
 
 .kpi-card{
-
-    background:#181818;
-
-    border-radius:12px;
-
-    padding:20px;
-
-    border:1px solid #303030;
-
-    margin-bottom:10px;
-
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
 }
 
 .kpi-title{
-
-    color:#BBBBBB;
-
-    font-size:14px;
-
+    color: var(--text-muted);
+    font-size: 14px;
 }
 
 .kpi-value{
-
-    color:white;
-
-    font-size:32px;
-
-    font-weight:bold;
-
+    color: var(--text);
+    font-size: 32px;
+    font-weight: bold;
 }
 
 /* ============================
    ESTADOS
 ============================ */
 
-.estado-ok{
+.estado-ok{ color: var(--ok); font-weight: bold; }
+.estado-warning{ color: var(--warn); font-weight: bold; }
+.estado-error{ color: var(--error); font-weight: bold; }
 
-    color:#00C853;
-
-    font-weight:bold;
-
-}
-
-.estado-warning{
-
-    color:#FFC107;
-
-    font-weight:bold;
-
-}
-
-.estado-error{
-
-    color:#F44336;
-
-    font-weight:bold;
-
+/* ============================
+   FALLBACK: modo alto contraste de Windows / navegadores
+   (forced-colors: active) — evita que el sistema reemplace
+   todo por su paleta de sistema sin control.
+============================ */
+@media (forced-colors: active){
+    .kpi-card, div[data-testid="metric-container"], div[data-testid="stMetric"]{
+        border: 1px solid CanvasText;
+        forced-color-adjust: none;
+    }
 }
