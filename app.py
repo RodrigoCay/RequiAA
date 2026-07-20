@@ -6,10 +6,11 @@ Created on Thu Jul  9 17:49:16 2026
 """
 
 """
-
+=========================================================
 Seguimiento  de compras Apoyo activo y INGECAF
 Versión 1.0
 
+=========================================================
 """
 
 import streamlit as st
@@ -20,6 +21,27 @@ from pathlib import Path
 from config import *
 from data_loader import *
 from kpis import *
+
+# =====================================================
+# ESTILO DE ETIQUETAS DE DATOS (PLOTLY)
+# =====================================================
+# Sin esto, Plotly elige automáticamente el color del texto
+# (blanco o gris) según el contraste con cada barra/segmento,
+# lo que hace que las etiquetas se vean inconsistentes entre
+# sí. Esta función fuerza siempre el mismo color y tamaño.
+
+def aplicar_estilo_texto(fig, tamano=14, color="#FFFFFF", min_size=12):
+
+    fig.update_traces(
+        textfont=dict(color=color, size=tamano)
+    )
+
+    fig.update_layout(
+        uniformtext_minsize=min_size,
+        uniformtext_mode="hide"
+    )
+
+    return fig
 
 # =====================================================
 # CONFIGURACIÓN STREAMLIT
@@ -351,6 +373,8 @@ with tab1:
 
         )
 
+        fig = aplicar_estilo_texto(fig)
+
         st.plotly_chart(
 
             fig,
@@ -398,6 +422,8 @@ with tab1:
             paper_bgcolor="#000000"
 
         )
+
+        fig = aplicar_estilo_texto(fig)
 
         st.plotly_chart(
 
@@ -465,6 +491,8 @@ with tab1:
 
         )
 
+        fig = aplicar_estilo_texto(fig)
+
         st.plotly_chart(
 
             fig,
@@ -528,6 +556,8 @@ with tab1:
             coloraxis_showscale=False
 
         )
+
+        fig = aplicar_estilo_texto(fig)
 
         st.plotly_chart(
 
@@ -595,6 +625,8 @@ with tab1:
 
         )
 
+        fig = aplicar_estilo_texto(fig)
+
         st.plotly_chart(
 
             fig,
@@ -654,6 +686,8 @@ with tab1:
             plot_bgcolor="#000000"
 
         )
+
+        fig = aplicar_estilo_texto(fig)
 
         st.plotly_chart(
 
@@ -1087,6 +1121,8 @@ with tab3:
 
         )
 
+        fig = aplicar_estilo_texto(fig)
+
         st.plotly_chart(
 
             fig,
@@ -1149,6 +1185,8 @@ with tab3:
 
         )
 
+        fig = aplicar_estilo_texto(fig)
+
         st.plotly_chart(
 
             fig,
@@ -1194,6 +1232,8 @@ with tab3:
             paper_bgcolor="#000000"
 
         )
+
+        fig = aplicar_estilo_texto(fig)
 
         st.plotly_chart(
 
