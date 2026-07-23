@@ -82,6 +82,8 @@ cargar_css()
 
 df = cargar_datos()
 
+detalle_oc_df = cargar_detalle_oc()
+
 # =====================================================
 # TITULO
 # =====================================================
@@ -1018,46 +1020,63 @@ with tab2:
     st.divider()
 
     # ==================================================
-    # DETALLE DE OC
+    # DETALLE DE OC (desde "Detalle solicitudes OC.xlsx")
     # ==================================================
 
-    st.subheader("Detalle de Órdenes Asociadas")
+    st.subheader("Detalle de la Solicitud")
 
-    columnas = [
+    requisiciones_sel = (
 
-        COLUMNAS["oc"],
+        detalle[COLUMNAS["requisiciones"]]
 
-        COLUMNAS["nro_orden"],
+        .dropna()
 
-        COLUMNAS["tipo_pago"],
+        .unique()
 
-        COLUMNAS["monto"],
+    )
 
-        COLUMNAS["fecha_oc"],
+    detalle_items = detalle_oc_df[
 
-        COLUMNAS["fecha_pago"],
+        detalle_oc_df[COLUMNAS_DETALLE_OC["requisicion"]]
 
-        COLUMNAS["fecha_entrega"],
-
-        COLUMNAS["estado"]
+        .isin(requisiciones_sel)
 
     ]
 
-    st.dataframe(
+    columnas_detalle = list(COLUMNAS_DETALLE_OC.values())
 
-        detalle[columnas],
+    if detalle_items.empty:
 
-        use_container_width=True,
+        st.info(
+            "No se encontró detalle de ítems para esta solicitud "
+            "en 'Detalle solicitudes OC.xlsx'."
+        )
 
-        hide_index=True
+    else:
 
-    )
+        st.dataframe(
+
+            detalle_items[columnas_detalle],
+
+            use_container_width=True,
+
+            hide_index=True
+
+        )
 
     # ==================================================
     # EXPORTAR
     # ==================================================
 
-    csv = detalle.to_csv(index=False).encode("utf-8-sig")
+    csv = (
+
+        detalle_items[columnas_detalle]
+
+        .to_csv(index=False)
+
+        .encode("utf-8-sig")
+
+    )
 
     st.download_button(
 
@@ -1065,7 +1084,7 @@ with tab2:
 
         csv,
 
-        "detalle_compra.csv",
+        "detalle_solicitud.csv",
 
         "text/csv"
 

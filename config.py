@@ -20,6 +20,14 @@ EXCEL_FILE = BASE_DIR / "Prueba.xlsx"
 SHEET_NAME = "Tabla Control"
 
 # =========================================================
+# ARCHIVO DE DETALLE DE OC (ítems por solicitud)
+# =========================================================
+
+DETALLE_OC_FILE = BASE_DIR / "Detalle solicitudes OC.xlsx"
+
+DETALLE_OC_SHEET = "Detalle"
+
+# =========================================================
 # COLORES
 # =========================================================
 
@@ -108,6 +116,34 @@ COLUMNAS = {
     "folio": "Folio Factura",
 
     "semana": "semana"
+
+}
+
+# =========================================================
+# COLUMNAS DEL DETALLE DE OC ("Detalle solicitudes OC.xlsx")
+# =========================================================
+
+COLUMNAS_DETALLE_OC = {
+
+    "requisicion": "N° de requisición",
+
+    "descripcion": "Descripción",
+
+    "cantidad": "Cantidad",
+
+    "valor_unitario": "Valor unitario",
+
+    "valor_neto": "Valor Neto",
+
+    "empresa_sol": "Empresa solicitante",
+
+    "solicitante": "Nombre Solicitante",
+
+    "contrato": "Contrato Solicitante",
+
+    "zona": "Zona requisición",
+
+    "estado_gestion": "Estado Gestión"
 
 }
 

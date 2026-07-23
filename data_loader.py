@@ -20,7 +20,10 @@ from config import (
     EXCEL_FILE,
     SHEET_NAME,
     COLUMNAS,
-    CACHE_SECONDS
+    CACHE_SECONDS,
+    DETALLE_OC_FILE,
+    DETALLE_OC_SHEET,
+    COLUMNAS_DETALLE_OC
 )
 
 
@@ -122,17 +125,32 @@ def convertir_fechas(df):
 # CONVERTIR MONTOS
 # =====================================================
 
-def convertir_montos(df):
+# =====================================================
+# LIMPIAR MONTOS EN FORMATO MONEDA (CLP)
+# =====================================================
+# Si la columna ya viene como número desde Excel (float),
+# NO se debe tratar como texto: astype(str) sobre 99000.0
+# produce "99000.0", y al limpiar el "." pensando que es
+# separador de miles se borra en realidad el punto decimal,
+# dejando "990000" -- de ahí el bug del monto multiplicado
+# por 10. Solo se limpia como texto si realmente viene en
+# formato moneda (ej. "$99.000").
 
-    monto = COLUMNAS["monto"]
+def limpiar_moneda(serie):
 
-    df[monto] = (
+    if pd.api.types.is_numeric_dtype(serie):
 
-        df[monto]
+        return pd.to_numeric(serie, errors="coerce")
+
+    limpio = (
+
+        serie
 
         .astype(str)
 
         .str.replace("$", "", regex=False)
+
+        .str.replace(" ", "", regex=False)
 
         .str.replace(".", "", regex=False)
 
@@ -140,13 +158,14 @@ def convertir_montos(df):
 
     )
 
-    df[monto] = pd.to_numeric(
+    return pd.to_numeric(limpio, errors="coerce")
 
-        df[monto],
 
-        errors="coerce"
+def convertir_montos(df):
 
-    )
+    monto = COLUMNAS["monto"]
+
+    df[monto] = limpiar_moneda(df[monto])
 
     return df
 
@@ -297,6 +316,80 @@ def cargar_datos():
     df = crear_columnas(df)
 
     return df
+
+
+# =====================================================
+# CARGA DETALLE DE ÍTEMS POR OC
+# =====================================================
+# Archivo separado en el mismo repositorio: "Detalle
+# solicitudes OC.xlsx", hoja "Detalle". Se cruza con la
+# tabla principal mediante la llave "N° de requisición".
+
+@st.cache_data(ttl=CACHE_SECONDS)
+
+def cargar_detalle_oc():
+
+    if not Path(DETALLE_OC_FILE).exists():
+
+        st.error(f"No se encontró el archivo:\n\n{DETALLE_OC_FILE}")
+
+        st.stop()
+
+    detalle = pd.read_excel(
+
+        DETALLE_OC_FILE,
+
+        sheet_name=DETALLE_OC_SHEET
+
+    )
+
+    detalle.columns = (
+
+        detalle.columns
+
+        .str.strip()
+
+    )
+
+    faltantes = [
+
+        c for c in COLUMNAS_DETALLE_OC.values()
+
+        if c not in detalle.columns
+
+    ]
+
+    if faltantes:
+
+        st.error("Faltan las siguientes columnas en 'Detalle solicitudes OC.xlsx':")
+
+        for c in faltantes:
+
+            st.write(f"• {c}")
+
+        st.stop()
+
+    detalle = limpiar_texto(detalle)
+
+    for col in [
+
+        COLUMNAS_DETALLE_OC["valor_unitario"],
+
+        COLUMNAS_DETALLE_OC["valor_neto"]
+
+    ]:
+
+        detalle[col] = limpiar_moneda(detalle[col])
+
+    detalle[COLUMNAS_DETALLE_OC["cantidad"]] = pd.to_numeric(
+
+        detalle[COLUMNAS_DETALLE_OC["cantidad"]],
+
+        errors="coerce"
+
+    )
+
+    return detalle
 
 
 # =====================================================
