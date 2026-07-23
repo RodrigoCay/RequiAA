@@ -1025,9 +1025,9 @@ with tab2:
 
     st.subheader("Detalle de la Solicitud")
 
-    requisiciones_sel = (
+    ordenes_sel = (
 
-        detalle[COLUMNAS["requisiciones"]]
+        detalle[COLUMNAS["ordenes"]]
 
         .dropna()
 
@@ -1037,13 +1037,19 @@ with tab2:
 
     detalle_items = detalle_oc_df[
 
-        detalle_oc_df[COLUMNAS_DETALLE_OC["requisicion"]]
+        detalle_oc_df[COLUMNAS_DETALLE_OC["llave"]]
 
-        .isin(requisiciones_sel)
+        .isin(ordenes_sel)
 
     ]
 
-    columnas_detalle = list(COLUMNAS_DETALLE_OC.values())
+    columnas_detalle = [
+
+        v for k, v in COLUMNAS_DETALLE_OC.items()
+
+        if k != "llave"
+
+    ]
 
     if detalle_items.empty:
 
