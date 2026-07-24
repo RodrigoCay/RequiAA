@@ -818,6 +818,39 @@ with tab2:
     st.divider()
 
     # ==================================================
+    # DETALLE DE OC (desde "Detalle solicitudes OC.xlsx")
+    # ==================================================
+    # Se calcula aquí (antes de las métricas) porque el monto
+    # "real" de la solicitud debe salir de este documento, no
+    # de la columna "Monto Orden" de la tabla principal.
+
+    ordenes_sel = (
+
+        detalle[COLUMNAS["ordenes"]]
+
+        .dropna()
+
+        .unique()
+
+    )
+
+    detalle_items = detalle_oc_df[
+
+        detalle_oc_df[COLUMNAS_DETALLE_OC["llave"]]
+
+        .isin(ordenes_sel)
+
+    ]
+
+    columnas_detalle = [
+
+        v for k, v in COLUMNAS_DETALLE_OC.items()
+
+        if k != "llave"
+
+    ]
+
+    # ==================================================
     # INFORMACIÓN GENERAL
     # ==================================================
 
@@ -835,7 +868,7 @@ with tab2:
 
         "Monto",
 
-        f"${detalle[COLUMNAS['monto']].sum():,.0f}"
+        f"${detalle_items[COLUMNAS_DETALLE_OC['valor_neto']].sum():,.0f}"
 
     )
 
@@ -1020,36 +1053,10 @@ with tab2:
     st.divider()
 
     # ==================================================
-    # DETALLE DE OC (desde "Detalle solicitudes OC.xlsx")
+    # TABLA DE ÍTEMS (Detalle solicitudes OC.xlsx)
     # ==================================================
 
     st.subheader("Detalle de la Solicitud")
-
-    ordenes_sel = (
-
-        detalle[COLUMNAS["ordenes"]]
-
-        .dropna()
-
-        .unique()
-
-    )
-
-    detalle_items = detalle_oc_df[
-
-        detalle_oc_df[COLUMNAS_DETALLE_OC["llave"]]
-
-        .isin(ordenes_sel)
-
-    ]
-
-    columnas_detalle = [
-
-        v for k, v in COLUMNAS_DETALLE_OC.items()
-
-        if k != "llave"
-
-    ]
 
     if detalle_items.empty:
 
