@@ -125,7 +125,7 @@ COLUMNAS = {
 
 COLUMNAS_DETALLE_OC = {
 
-    "llave": "Llave",
+    "LLave": "Llave",
 
     "requisicion": "N° de requisición",
 
