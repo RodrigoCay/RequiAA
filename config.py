@@ -147,7 +147,7 @@ COLUMNAS_DETALLE_OC = {
 
     "estado_gestion": "Estado Gestión",
 
-    "comentario": "Comentario"
+    "Comentario": "Comentario"
 
 }
 
