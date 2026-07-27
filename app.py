@@ -836,7 +836,7 @@ with tab2:
 
     detalle_items = detalle_oc_df[
 
-        detalle_oc_df[COLUMNAS_DETALLE_OC["ave"]]
+        detalle_oc_df[COLUMNAS_DETALLE_OC["LLave"]]
 
         .isin(ordenes_sel)
 
