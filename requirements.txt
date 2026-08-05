@@ -3,4 +3,5 @@ pandas
 openpyxl
 plotly
 numpy
-Pillow>=11.3.0
+Pillow
+
