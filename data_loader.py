@@ -23,7 +23,9 @@ from config import (
     CACHE_SECONDS,
     DETALLE_OC_FILE,
     DETALLE_OC_SHEET,
-    COLUMNAS_DETALLE_OC
+    COLUMNAS_DETALLE_OC,
+    REQUISICIONES_SHEET,
+    COLUMNAS_REQUISICIONES
 )
 
 
@@ -390,6 +392,72 @@ def cargar_detalle_oc():
     )
 
     return detalle
+
+
+# =====================================================
+# CARGA DE ÍTEMS POR REQUISICIÓN
+# =====================================================
+# Mismo archivo "Detalle solicitudes OC.xlsx", hoja
+# "Requisiciones". Se cruza con la tabla principal
+# mediante la llave "LLave" == "Requisiciones".
+
+@st.cache_data(ttl=CACHE_SECONDS)
+
+def cargar_requisiciones():
+
+    if not Path(DETALLE_OC_FILE).exists():
+
+        st.error(f"No se encontró el archivo:\n\n{DETALLE_OC_FILE}")
+
+        st.stop()
+
+    requisiciones = pd.read_excel(
+
+        DETALLE_OC_FILE,
+
+        sheet_name=REQUISICIONES_SHEET
+
+    )
+
+    requisiciones.columns = (
+
+        requisiciones.columns
+
+        .str.strip()
+
+    )
+
+    faltantes = [
+
+        c for c in COLUMNAS_REQUISICIONES.values()
+
+        if c not in requisiciones.columns
+
+    ]
+
+    if faltantes:
+
+        st.error("Faltan las siguientes columnas en la hoja 'Requisiciones':")
+
+        for c in faltantes:
+
+            st.write(f"• {c}")
+
+        st.stop()
+
+    requisiciones = requisiciones[list(COLUMNAS_REQUISICIONES.values())]
+
+    requisiciones = limpiar_texto(requisiciones)
+
+    requisiciones[COLUMNAS_REQUISICIONES["cantidad"]] = pd.to_numeric(
+
+        requisiciones[COLUMNAS_REQUISICIONES["cantidad"]],
+
+        errors="coerce"
+
+    )
+
+    return requisiciones
 
 
 # =====================================================

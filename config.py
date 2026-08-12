@@ -27,6 +27,8 @@ DETALLE_OC_FILE = BASE_DIR / "Detalle solicitudes OC.xlsx"
 
 DETALLE_OC_SHEET = "Detalle"
 
+REQUISICIONES_SHEET = "Requisiciones"
+
 # =========================================================
 # COLORES
 # =========================================================
@@ -125,7 +127,7 @@ COLUMNAS = {
 
 COLUMNAS_DETALLE_OC = {
 
-    "LLave": "LLave",
+    "llave": "LLave",
 
     "requisicion": "N° de requisición",
 
@@ -147,7 +149,34 @@ COLUMNAS_DETALLE_OC = {
 
     "estado_gestion": "Estado Gestión",
 
-    "Comentario": "Comentario"
+    "comentario": "Comentario"
+
+}
+
+# =========================================================
+# COLUMNAS DE LA HOJA "Requisiciones"
+# =========================================================
+# (mismo archivo "Detalle solicitudes OC.xlsx", hoja aparte)
+# No se incluyen las columnas de referencia de la planilla
+# (listas desplegables tipo "Column8", "BackOffice (BBOO)",
+# "04 Coquimbo", "Litros", etc.) porque no son datos de la
+# requisición, sino listas auxiliares de la hoja de origen.
+
+COLUMNAS_REQUISICIONES = {
+
+    "llave": "LLave",
+
+    "producto": "Producto",
+
+    "descripcion": "Descripción producto",
+
+    "cantidad": "Cantidad",
+
+    "unidad": "Unidad medida",
+
+    "especificaciones": "Especificaciones técnicas",
+
+    "link": "Link (Imagen o Especificaciones técnicas)"
 
 }
 

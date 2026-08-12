@@ -84,6 +84,8 @@ df = cargar_datos()
 
 detalle_oc_df = cargar_detalle_oc()
 
+requisiciones_df = cargar_requisiciones()
+
 # =====================================================
 # TITULO
 # =====================================================
@@ -834,9 +836,19 @@ with tab2:
 
     )
 
+    requisiciones_sel = (
+
+        detalle[COLUMNAS["requisiciones"]]
+
+        .dropna()
+
+        .unique()
+
+    )
+
     detalle_items = detalle_oc_df[
 
-        detalle_oc_df[COLUMNAS_DETALLE_OC["LLave"]]
+        detalle_oc_df[COLUMNAS_DETALLE_OC["llave"]]
 
         .isin(ordenes_sel)
 
@@ -846,7 +858,7 @@ with tab2:
 
         v for k, v in COLUMNAS_DETALLE_OC.items()
 
-        if k != "LLave"
+        if k != "llave"
 
     ]
 
@@ -1098,6 +1110,71 @@ with tab2:
         csv,
 
         "detalle_solicitud.csv",
+
+        "text/csv"
+
+    )
+
+    # ==================================================
+    # ÍTEMS DE LA REQUISICIÓN (hoja "Requisiciones")
+    # ==================================================
+
+    st.divider()
+
+    st.subheader("Ítems de la Requisición")
+
+    items_requisicion = requisiciones_df[
+
+        requisiciones_df[COLUMNAS_REQUISICIONES["llave"]]
+
+        .isin(requisiciones_sel)
+
+    ]
+
+    columnas_requisicion = [
+
+        v for k, v in COLUMNAS_REQUISICIONES.items()
+
+        if k != "llave"
+
+    ]
+
+    if items_requisicion.empty:
+
+        st.info(
+            "No se encontró detalle de productos para esta requisición "
+            "en la hoja 'Requisiciones'."
+        )
+
+    else:
+
+        st.dataframe(
+
+            items_requisicion[columnas_requisicion],
+
+            use_container_width=True,
+
+            hide_index=True
+
+        )
+
+    csv_requisicion = (
+
+        items_requisicion[columnas_requisicion]
+
+        .to_csv(index=False)
+
+        .encode("utf-8-sig")
+
+    )
+
+    st.download_button(
+
+        "📥 Descargar ítems de la requisición",
+
+        csv_requisicion,
+
+        "items_requisicion.csv",
 
         "text/csv"
 
