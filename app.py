@@ -1055,61 +1055,8 @@ with tab2:
     st.divider()
 
     # ==================================================
-    # TABLA DE ÍTEMS (Detalle solicitudes OC.xlsx)
-    # ==================================================
-
-    st.subheader("Detalle de la Solicitud")
-
-    if detalle_items.empty:
-
-        st.info(
-            "No se encontró detalle de ítems para esta solicitud "
-            "en 'Detalle solicitudes OC.xlsx'."
-        )
-
-    else:
-
-        st.dataframe(
-
-            detalle_items[columnas_detalle],
-
-            use_container_width=True,
-
-            hide_index=True
-
-        )
-
-    # ==================================================
-    # EXPORTAR
-    # ==================================================
-
-    csv = (
-
-        detalle_items[columnas_detalle]
-
-        .to_csv(index=False)
-
-        .encode("utf-8-sig")
-
-    )
-
-    st.download_button(
-
-        "📥 Descargar detalle",
-
-        csv,
-
-        "detalle_solicitud.csv",
-
-        "text/csv"
-
-    )
-
-    # ==================================================
     # ÍTEMS DE LA REQUISICIÓN (hoja "Requisiciones")
     # ==================================================
-
-    st.divider()
 
     st.subheader("Ítems de la Requisición")
 
@@ -1155,6 +1102,71 @@ with tab2:
         .to_csv(index=False)
 
         .encode("utf-8-sig")
+
+    )
+
+    st.download_button(
+
+        "📥 Descargar ítems de la requisición",
+
+        csv_requisicion,
+
+        "items_requisicion.csv",
+
+        "text/csv"
+
+    )
+
+    # ==================================================
+    # TABLA DE ÍTEMS (Detalle solicitudes OC.xlsx)
+    # ==================================================
+
+    st.divider()
+
+    st.subheader("Detalle de la Solicitud")
+
+    if detalle_items.empty:
+
+        st.info(
+            "No se encontró detalle de ítems para esta solicitud "
+            "en 'Detalle solicitudes OC.xlsx'."
+        )
+
+    else:
+
+        st.dataframe(
+
+            detalle_items[columnas_detalle],
+
+            use_container_width=True,
+
+            hide_index=True
+
+        )
+
+    # ==================================================
+    # EXPORTAR
+    # ==================================================
+
+    csv = (
+
+        detalle_items[columnas_detalle]
+
+        .to_csv(index=False)
+
+        .encode("utf-8-sig")
+
+    )
+
+    st.download_button(
+
+        "📥 Descargar detalle",
+
+        csv,
+
+        "detalle_solicitud.csv",
+
+        "text/csv"
 
     )
 
