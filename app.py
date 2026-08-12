@@ -1113,7 +1113,9 @@ with tab2:
 
         "items_requisicion.csv",
 
-        "text/csv"
+        "text/csv",
+
+        key="descargar_items_requisicion"
 
     )
 
@@ -1166,19 +1168,9 @@ with tab2:
 
         "detalle_solicitud.csv",
 
-        "text/csv"
+        "text/csv",
 
-    )
-
-    st.download_button(
-
-        "📥 Descargar ítems de la requisición",
-
-        csv_requisicion,
-
-        "items_requisicion.csv",
-
-        "text/csv"
+        key="descargar_detalle_oc"
 
     )
     
