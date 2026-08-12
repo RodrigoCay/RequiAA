@@ -836,16 +836,6 @@ with tab2:
 
     )
 
-    requisiciones_sel = (
-
-        detalle[COLUMNAS["requisiciones"]]
-
-        .dropna()
-
-        .unique()
-
-    )
-
     detalle_items = detalle_oc_df[
 
         detalle_oc_df[COLUMNAS_DETALLE_OC["llave"]]
@@ -1127,7 +1117,7 @@ with tab2:
 
         requisiciones_df[COLUMNAS_REQUISICIONES["llave"]]
 
-        .isin(requisiciones_sel)
+        .isin(ordenes_sel)
 
     ]
 
