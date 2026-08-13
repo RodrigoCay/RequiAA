@@ -5,14 +5,6 @@ Created on Thu Jul  9 17:49:16 2026
 @author: rcayuleo
 """
 
-"""
-=========================================================
-Seguimiento  de compras Apoyo activo y INGECAF
-Versión 1.0
-
-=========================================================
-"""
-
 import streamlit as st
 import pandas as pd
 import io
