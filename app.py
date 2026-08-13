@@ -15,12 +15,29 @@ Versión 1.0
 
 import streamlit as st
 import pandas as pd
+import io
 from pathlib import Path
 
 # Archivos del proyecto
 from config import *
 from data_loader import *
 from kpis import *
+
+# =====================================================
+# EXPORTAR DATAFRAME A EXCEL (bytes)
+# =====================================================
+# Usado por los botones de descarga que ofrecen .xlsx en
+# vez de .csv.
+
+def exportar_excel(df, nombre_hoja="Datos"):
+
+    buffer = io.BytesIO()
+
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+
+        df.to_excel(writer, index=False, sheet_name=nombre_hoja)
+
+    return buffer.getvalue()
 
 # =====================================================
 # ESTILO DE ETIQUETAS DE DATOS (PLOTLY)
@@ -85,6 +102,8 @@ df = cargar_datos()
 detalle_oc_df = cargar_detalle_oc()
 
 requisiciones_df = cargar_requisiciones()
+
+cotizaciones_df = cargar_cotizaciones()
 
 # =====================================================
 # TITULO
@@ -1116,6 +1135,93 @@ with tab2:
         "text/csv",
 
         key="descargar_items_requisicion"
+
+    )
+
+    # ==================================================
+    # COTIZACIONES (hoja "Cotizaciones")
+    # ==================================================
+
+    st.divider()
+
+    st.subheader("Cotizaciones")
+
+    cotizaciones_items = cotizaciones_df[
+
+        cotizaciones_df[COLUMNAS_COTIZACIONES["llave"]]
+
+        .isin(ordenes_sel)
+
+    ]
+
+    columnas_cotizacion = [
+
+        v for k, v in COLUMNAS_COTIZACIONES.items()
+
+        if k != "llave"
+
+    ]
+
+    if cotizaciones_items.empty:
+
+        st.info(
+            "No se encontró detalle de cotizaciones para esta solicitud "
+            "en la hoja 'Cotizaciones'."
+        )
+
+    else:
+
+        st.dataframe(
+
+            cotizaciones_items[columnas_cotizacion],
+
+            use_container_width=True,
+
+            hide_index=True
+
+        )
+
+        total_neto_cot = cotizaciones_items[COLUMNAS_COTIZACIONES["subtotal"]].sum()
+
+        total_iva_cot = cotizaciones_items[COLUMNAS_COTIZACIONES["totales"]].sum()
+
+        fila_totales = st.columns(2)
+
+        fila_totales[0].metric(
+
+            "Total Neto",
+
+            f"${total_neto_cot:,.0f}"
+
+        )
+
+        fila_totales[1].metric(
+
+            "Total (Neto + IVA)",
+
+            f"${total_iva_cot:,.0f}"
+
+        )
+
+    excel_cotizaciones = exportar_excel(
+
+        cotizaciones_items[columnas_cotizacion],
+
+        nombre_hoja="Cotizaciones"
+
+    )
+
+    st.download_button(
+
+        "📥 Descargar cotizaciones",
+
+        excel_cotizaciones,
+
+        "cotizaciones.xlsx",
+
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+        key="descargar_cotizaciones"
 
     )
 

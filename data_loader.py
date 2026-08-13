@@ -25,7 +25,9 @@ from config import (
     DETALLE_OC_SHEET,
     COLUMNAS_DETALLE_OC,
     REQUISICIONES_SHEET,
-    COLUMNAS_REQUISICIONES
+    COLUMNAS_REQUISICIONES,
+    COTIZACIONES_SHEET,
+    COLUMNAS_COTIZACIONES
 )
 
 
@@ -140,27 +142,41 @@ def convertir_fechas(df):
 
 def limpiar_moneda(serie):
 
-    if pd.api.types.is_numeric_dtype(serie):
+    # 1) Intento directo: si el valor ya es numérico -aunque la
+    #    columna completa sea dtype "object" por tener alguna
+    #    celda vacía o de texto en otra fila-, to_numeric lo
+    #    interpreta bien tal cual, sin tocarlo como texto.
 
-        return pd.to_numeric(serie, errors="coerce")
+    directo = pd.to_numeric(serie, errors="coerce")
 
-    limpio = (
+    # 2) Solo para los valores que NO se pudieron convertir
+    #    directo (vienen realmente como texto con formato
+    #    moneda, ej. "$99.000"), se limpia el texto y se
+    #    reintenta la conversión solo para esos.
 
-        serie
+    pendientes = directo.isna() & serie.notna()
 
-        .astype(str)
+    if pendientes.any():
 
-        .str.replace("$", "", regex=False)
+        limpio = (
 
-        .str.replace(" ", "", regex=False)
+            serie[pendientes]
 
-        .str.replace(".", "", regex=False)
+            .astype(str)
 
-        .str.replace(",", ".", regex=False)
+            .str.replace("$", "", regex=False)
 
-    )
+            .str.replace(" ", "", regex=False)
 
-    return pd.to_numeric(limpio, errors="coerce")
+            .str.replace(".", "", regex=False)
+
+            .str.replace(",", ".", regex=False)
+
+        )
+
+        directo.loc[pendientes] = pd.to_numeric(limpio, errors="coerce")
+
+    return directo
 
 
 def convertir_montos(df):
@@ -458,6 +474,91 @@ def cargar_requisiciones():
     )
 
     return requisiciones
+
+
+# =====================================================
+# CARGA DE COTIZACIONES
+# =====================================================
+# Mismo archivo "Detalle solicitudes OC.xlsx", hoja
+# "Cotizaciones". Se cruza con la tabla principal mediante
+# la llave "LLave" == "Ordenes" (igual que el detalle de OC).
+
+@st.cache_data(ttl=CACHE_SECONDS)
+
+def cargar_cotizaciones():
+
+    if not Path(DETALLE_OC_FILE).exists():
+
+        st.error(f"No se encontró el archivo:\n\n{DETALLE_OC_FILE}")
+
+        st.stop()
+
+    cotizaciones = pd.read_excel(
+
+        DETALLE_OC_FILE,
+
+        sheet_name=COTIZACIONES_SHEET
+
+    )
+
+    cotizaciones.columns = (
+
+        cotizaciones.columns
+
+        .str.strip()
+
+    )
+
+    # Nota: los nombres de columna con espacios al inicio o
+    # final en el Excel (ej. "tipo pago ") quedan sin ese
+    # espacio tras el .str.strip() de arriba, por eso
+    # COLUMNAS_COTIZACIONES en config.py los tiene sin espacio.
+
+    faltantes = [
+
+        c for c in COLUMNAS_COTIZACIONES.values()
+
+        if c not in cotizaciones.columns
+
+    ]
+
+    if faltantes:
+
+        st.error("Faltan las siguientes columnas en la hoja 'Cotizaciones':")
+
+        for c in faltantes:
+
+            st.write(f"• {c}")
+
+        st.stop()
+
+    cotizaciones = cotizaciones[list(COLUMNAS_COTIZACIONES.values())]
+
+    cotizaciones = limpiar_texto(cotizaciones)
+
+    for col in [
+
+        COLUMNAS_COTIZACIONES["valor_un_neto"],
+
+        COLUMNAS_COTIZACIONES["subtotal"],
+
+        COLUMNAS_COTIZACIONES["iva"],
+
+        COLUMNAS_COTIZACIONES["totales"]
+
+    ]:
+
+        cotizaciones[col] = limpiar_moneda(cotizaciones[col])
+
+    cotizaciones[COLUMNAS_COTIZACIONES["un"]] = pd.to_numeric(
+
+        cotizaciones[COLUMNAS_COTIZACIONES["un"]],
+
+        errors="coerce"
+
+    )
+
+    return cotizaciones
 
 
 # =====================================================

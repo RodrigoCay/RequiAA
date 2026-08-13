@@ -181,6 +181,39 @@ COLUMNAS_REQUISICIONES = {
 }
 
 # =========================================================
+# COLUMNAS DE LA HOJA "Cotizaciones"
+# =========================================================
+# (mismo archivo "Detalle solicitudes OC.xlsx", hoja aparte)
+
+COTIZACIONES_SHEET = "Cotizaciones"
+
+COLUMNAS_COTIZACIONES = {
+
+    "llave": "LLave",
+
+    "articulo": "articulo",
+
+    "un": "UN",
+
+    "proveedor": "proveedor",
+
+    "rut_proveedor": "Rut Proveedor",
+
+    "tipo_pago": "tipo pago",
+
+    "valor_un_neto": "valor un neto",
+
+    "subtotal": "subtotal",
+
+    "iva": "iva",
+
+    "totales": "totales",
+
+    "estado": "Estado"
+
+}
+
+# =========================================================
 # FORMATO DE FECHAS
 # =========================================================
 
