@@ -201,8 +201,6 @@ COLUMNAS_COTIZACIONES = {
 
     "proveedor": "proveedor",
 
-    "rut_proveedor": "Rut Proveedor",
-
     "tipo_pago": "tipo pago",
 
     "valor_un_neto": "valor un neto",

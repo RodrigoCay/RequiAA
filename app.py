@@ -14,6 +14,7 @@ from pathlib import Path
 from config import *
 from data_loader import *
 from kpis import *
+from ui import *
 
 # =====================================================
 # EXPORTAR DATAFRAME A EXCEL (bytes)
@@ -40,14 +41,14 @@ def exportar_excel(df, nombre_hoja="Datos"):
 
 import plotly.express as px
 
-TEXTO_GRAFICO = "#111111"
+TEXTO_GRAFICO = "#0F172A"
 
-GRILLA_GRAFICO = "#E3E7ED"
+GRILLA_GRAFICO = "#EEF2F6"
 
 # Paleta de colores intensos: se leen bien sobre blanco y
 # permiten texto blanco encima (sin tonos pastel).
 PALETA = [
-    "#0B4F8A",  # azul
+    "#1E3A8A",  # azul marino
     "#C0392B",  # rojo
     "#1E8449",  # verde
     "#D68910",  # naranjo
@@ -70,13 +71,14 @@ def estilo_grafico(fig, titulo, altura=480):
 
         title=dict(
             text=titulo,
-            font=dict(size=24, color=TEXTO_GRAFICO),
+            pad=dict(l=8),
+            font=dict(size=21, color=TEXTO_GRAFICO, weight=700),
             x=0,
             xanchor="left"
         ),
 
         font=dict(
-            family="Segoe UI, Arial, sans-serif",
+            family="Inter, Segoe UI, Arial, sans-serif",
             size=16,
             color=TEXTO_GRAFICO
         ),
@@ -87,7 +89,7 @@ def estilo_grafico(fig, titulo, altura=480):
 
         height=altura,
 
-        margin=dict(l=10, r=20, t=80, b=10),
+        margin=dict(l=24, r=40, t=80, b=20),
 
         legend=dict(font=dict(size=16, color=TEXTO_GRAFICO)),
 
@@ -141,7 +143,7 @@ def estilo_grafico(fig, titulo, altura=480):
 
             eje = fig.update_xaxes if horizontal else fig.update_yaxes
 
-            eje(range=[0, maximo * 1.22])
+            eje(range=[0, maximo * (1.3 if horizontal else 1.2)])
 
     # Donas: porcentaje en blanco sobre colores intensos; los
     # nombres van en la leyenda.
@@ -305,23 +307,23 @@ cotizaciones_df = cargar_cotizaciones()
 # TITULO
 # =====================================================
 
-col1,col2 = st.columns([5,1])
+encabezado(
 
-with col1:
+    "Control de Compras",
 
-    st.title("📦 Dashboard Control de Compras")
+    "Requisiciones, cotizaciones y órdenes de compra",
 
-with col2:
+    [
 
-    st.metric(
+        ("Registros", f"{len(df):,}"),
 
-        "Registros",
+        ("Requisiciones", f"{df[COLUMNAS['requisiciones']].nunique():,}"),
 
-        f"{len(df):,}"
+        ("Órdenes de compra", f"{df[COLUMNAS['oc']].nunique():,}")
 
-    )
+    ]
 
-st.divider()
+)
 
 # =====================================================
 # FILTROS (arriba, en desplegables)
@@ -360,7 +362,7 @@ with st.container(border=True):
 
     cab1, cab2 = st.columns([5, 1], vertical_alignment="center")
 
-    cab1.markdown("### 🔍 Filtros")
+    cab1.markdown("#### Filtros")
 
     cab2.button(
         "Limpiar filtros",
@@ -442,13 +444,13 @@ tab1,tab2,tab3,tab4 = st.tabs(
 
     [
 
-        "📊 Resumen",
+        "Resumen",
 
-        "🔎 Seguimiento",
+        "Seguimiento",
 
-        "📈 Análisis",
+        "Análisis",
 
-        "📋 Base de Datos"
+        "Base de datos"
 
     ]
 
@@ -460,7 +462,7 @@ tab1,tab2,tab3,tab4 = st.tabs(
 
 with tab1:
 
-    st.subheader("Resumen Ejecutivo")
+    seccion("Resumen ejecutivo", "Indicadores calculados sobre los registros filtrados.")
 
     mostrar_kpis(df)
 
@@ -808,35 +810,44 @@ with tab1:
 
 with tab2:
 
-    st.subheader("🔎 Seguimiento de Compras")
-
-    tipo_busqueda = st.radio(
-
-        "Buscar por",
-
-        [
-
-            "Requisición",
-
-            "OC",
-
-            "N° Orden"
-
-        ],
-
-        horizontal=True
-
+    seccion(
+        "Seguimiento de compras",
+        "Busque una solicitud para ver su estado, fechas, ítems y cotizaciones."
     )
 
     # ==============================================
-    # REQUISICIÓN
+    # BÚSQUEDA
     # ==============================================
 
-    if tipo_busqueda == "Requisición":
+    BUSQUEDAS = {
+
+        "Requisición": (COLUMNAS["requisiciones"], "Seleccione una requisición"),
+
+        "OC": (COLUMNAS["oc"], "Seleccione una OC"),
+
+        "N° Orden": (COLUMNAS["nro_orden"], "Seleccione un número de orden")
+
+    }
+
+    with st.container(border=True):
+
+        b1, b2 = st.columns([1, 3])
+
+        tipo_busqueda = b1.radio(
+
+            "Buscar por",
+
+            list(BUSQUEDAS),
+
+            horizontal=False
+
+        )
+
+        columna_busqueda, texto_busqueda = BUSQUEDAS[tipo_busqueda]
 
         lista = sorted(
 
-            df[COLUMNAS["requisiciones"]]
+            df[columna_busqueda]
 
             .dropna()
 
@@ -844,29 +855,38 @@ with tab2:
 
         )
 
-        valor = st.selectbox(
+        valor = b2.selectbox(
 
-            "Seleccione una Requisición",
+            texto_busqueda,
 
-            lista
+            lista,
+
+            placeholder="Sin resultados con los filtros actuales"
 
         )
 
-        detalle = df[
+    detalle = df[df[columna_busqueda] == valor]
 
-            df[COLUMNAS["requisiciones"]] == valor
+    if detalle.empty:
 
-        ]
+        aviso(
+            "No hay solicitudes que coincidan con los filtros seleccionados.",
+            "info"
+        )
 
-    # ==============================================
-    # OC
-    # ==============================================
+    else:
 
-    elif tipo_busqueda == "OC":
+        fila = detalle.iloc[0]
 
-        lista = sorted(
+        # ==================================================
+        # DETALLE DE OC (desde "Detalle solicitudes OC.xlsx")
+        # ==================================================
+        # El monto "real" de la solicitud sale de este documento,
+        # no de la columna "Monto Orden" de la tabla principal.
 
-            df[COLUMNAS["oc"]]
+        ordenes_sel = (
+
+            detalle[COLUMNAS["ordenes"]]
 
             .dropna()
 
@@ -874,491 +894,318 @@ with tab2:
 
         )
 
-        valor = st.selectbox(
+        detalle_items = detalle_oc_df[
 
-            "Seleccione una OC",
+            detalle_oc_df[COLUMNAS_DETALLE_OC["llave"]]
 
-            lista
-
-        )
-
-        detalle = df[
-
-            df[COLUMNAS["oc"]] == valor
+            .isin(ordenes_sel)
 
         ]
 
-    # ==============================================
-    # ORDEN
-    # ==============================================
+        columnas_detalle = [
 
-    else:
+            v for k, v in COLUMNAS_DETALLE_OC.items()
 
-        lista = sorted(
-
-            df[COLUMNAS["nro_orden"]]
-
-            .dropna()
-
-            .unique()
-
-        )
-
-        valor = st.selectbox(
-
-            "Seleccione un Número de Orden",
-
-            lista
-
-        )
-
-        detalle = df[
-
-            df[COLUMNAS["nro_orden"]] == valor
+            if k != "llave"
 
         ]
 
-    st.divider()
+        # ==================================================
+        # INDICADORES
+        # ==================================================
 
-    # ==================================================
-    # DETALLE DE OC (desde "Detalle solicitudes OC.xlsx")
-    # ==================================================
-    # Se calcula aquí (antes de las métricas) porque el monto
-    # "real" de la solicitud debe salir de este documento, no
-    # de la columna "Monto Orden" de la tabla principal.
+        tiempo_ciclo = detalle[COLUMNAS["tiempo"]].mean()
 
-    ordenes_sel = (
+        kpis([
 
-        detalle[COLUMNAS["ordenes"]]
+            {"etiqueta": "Estado", "valor": badge(fila[COLUMNAS["estado"]])},
 
-        .dropna()
+            {"etiqueta": "Monto (neto)",
+             "valor": moneda(detalle_items[COLUMNAS_DETALLE_OC["valor_neto"]].sum()),
+             "tono": "info"},
 
-        .unique()
+            {"etiqueta": "OC asociadas",
+             "valor": f"{detalle[COLUMNAS['oc']].nunique():,}"},
 
-    )
+            {"etiqueta": "Tiempo de ciclo",
+             "valor": "—" if pd.isna(tiempo_ciclo)
+             else f"{tiempo_ciclo:.1f} <small>días</small>"},
 
-    detalle_items = detalle_oc_df[
+        ])
 
-        detalle_oc_df[COLUMNAS_DETALLE_OC["llave"]]
+        # ==================================================
+        # AVANCE DEL PROCESO
+        # ==================================================
 
-        .isin(ordenes_sel)
+        estado_actual = fila[COLUMNAS["estado"]]
 
-    ]
+        PROGRESO = {
 
-    columnas_detalle = [
+            "Proceso OC completo": 100,
 
-        v for k, v in COLUMNAS_DETALLE_OC.items()
+            "Falta entrega": 80,
 
-        if k != "llave"
+            "Falta OC": 45,
 
-    ]
+            "Falta cotización": 20,
 
-    # ==================================================
-    # INFORMACIÓN GENERAL
-    # ==================================================
+            "Falta cotizacion": 20
 
-    fila1 = st.columns(4)
+        }
 
-    fila1[0].metric(
+        progreso = PROGRESO.get(estado_actual, 10)
 
-        "Estado",
+        avance(
 
-        detalle.iloc[0][COLUMNAS["estado"]]
+            [
 
-    )
+                ("Requisición", fmt_fecha(fila[COLUMNAS["fecha_req"]]), True),
 
-    fila1[1].metric(
+                ("Cotización", fmt_fecha(fila[COLUMNAS["fecha_cot"]]),
+                 pd.notna(fila[COLUMNAS["fecha_cot"]])),
 
-        "Monto",
+                ("Orden de compra", fmt_fecha(fila[COLUMNAS["fecha_oc"]]),
+                 pd.notna(fila[COLUMNAS["fecha_oc"]])),
 
-        f"${detalle_items[COLUMNAS_DETALLE_OC['valor_neto']].sum():,.0f}"
+                ("Pago", fmt_fecha(fila[COLUMNAS["fecha_pago"]]),
+                 pd.notna(fila[COLUMNAS["fecha_pago"]])),
 
-    )
+                ("Entrega", fmt_fecha(fila[COLUMNAS["fecha_entrega"]]),
+                 pd.notna(fila[COLUMNAS["fecha_entrega"]])),
 
-    fila1[2].metric(
+            ],
 
-        "OC Asociadas",
-
-        detalle[COLUMNAS["oc"]].nunique()
-
-    )
-
-    fila1[3].metric(
-
-        "Tiempo Ciclo",
-
-        f"{detalle[COLUMNAS['tiempo']].mean():.1f} días"
-
-    )
-
-    st.divider()
-
-    # ==================================================
-    # INFORMACIÓN DEL PROCESO
-    # ==================================================
-
-    c1,c2 = st.columns(2)
-
-    with c1:
-
-        st.markdown("### Información General")
-
-        st.write(
-
-            "**Empresa Solicitante:**",
-
-            detalle.iloc[0][COLUMNAS["empresa_sol"]]
+            progreso
 
         )
 
-        st.write(
+        # ==================================================
+        # INFORMACIÓN GENERAL
+        # ==================================================
 
-            "**Empresa Compra:**",
+        c1, c2 = st.columns(2)
 
-            detalle.iloc[0][COLUMNAS["empresa_compra"]]
+        with c1:
 
-        )
+            ficha("Información general", [
 
-        st.write(
+                ("Empresa solicitante", fila[COLUMNAS["empresa_sol"]]),
 
-            "**Contrato:**",
+                ("Empresa compra", fila[COLUMNAS["empresa_compra"]]),
 
-            detalle.iloc[0][COLUMNAS["contrato"]]
+                ("Contrato", fila[COLUMNAS["contrato"]]),
 
-        )
+            ])
 
-        st.write(
+        with c2:
 
-            "**Solicitante:**",
+            ficha("Solicitud", [
 
-            detalle.iloc[0][COLUMNAS["solicitante"]]
+                ("Solicitante", fila[COLUMNAS["solicitante"]]),
 
-        )
+                ("Zona", fila[COLUMNAS["zona"]]),
 
-        st.write(
+                ("Tipo de compra", fila[COLUMNAS["tipo_compra"]]),
 
-            "**Zona:**",
+            ])
 
-            detalle.iloc[0][COLUMNAS["zona"]]
+        # ==================================================
+        # ÍTEMS DE LA REQUISICIÓN (hoja "Requisiciones")
+        # ==================================================
 
-        )
+        seccion("Ítems de la requisición")
 
-        st.write(
+        items_requisicion = requisiciones_df[
 
-            "**Tipo Compra:**",
+            requisiciones_df[COLUMNAS_REQUISICIONES["llave"]]
 
-            detalle.iloc[0][COLUMNAS["tipo_compra"]]
+            .isin(ordenes_sel)
 
-        )
+        ]
 
-    with c2:
+        columnas_requisicion = [
 
-        st.markdown("### Fechas")
+            v for k, v in COLUMNAS_REQUISICIONES.items()
 
-        st.markdown(
+            if k != "llave"
 
-            f"**Requisición:** {fmt_fecha(detalle.iloc[0][COLUMNAS['fecha_req']])}"
+        ]
 
-        )
+        if items_requisicion.empty:
 
-        st.markdown(
+            aviso(
+                "No se encontró detalle de productos para esta requisición "
+                "en la hoja 'Requisiciones'."
+            )
 
-            f"**Cotización:** {fmt_fecha(detalle.iloc[0][COLUMNAS['fecha_cot']])}"
+        else:
 
-        )
+            tabla_html(items_requisicion[columnas_requisicion])
 
-        st.markdown(
+            st.download_button(
 
-            f"**OC:** {fmt_fecha(detalle.iloc[0][COLUMNAS['fecha_oc']])}"
+                "Descargar ítems (.csv)",
 
-        )
+                items_requisicion[columnas_requisicion]
+                .to_csv(index=False)
+                .encode("utf-8-sig"),
 
-        st.markdown(
+                "items_requisicion.csv",
 
-            f"**Pago:** {fmt_fecha(detalle.iloc[0][COLUMNAS['fecha_pago']])}"
+                "text/csv",
 
-        )
+                key="descargar_items_requisicion"
 
-        st.markdown(
+            )
 
-            f"**Entrega:** {fmt_fecha(detalle.iloc[0][COLUMNAS['fecha_entrega']])}"
+        # ==================================================
+        # COTIZACIONES (hoja "Cotizaciones")
+        # ==================================================
 
-        )
+        seccion("Cotizaciones")
 
-    st.divider()
+        cotizaciones_items = cotizaciones_df[
 
-    # ==================================================
-    # TIMELINE
-    # ==================================================
+            cotizaciones_df[COLUMNAS_COTIZACIONES["llave"]]
 
-    st.markdown("## Estado del Proceso")
+            .isin(ordenes_sel)
 
-    estado = detalle.iloc[0][COLUMNAS["estado"]]
+        ]
 
-    if estado == "Proceso OC completo":
+        columnas_cotizacion = [
 
-        progreso = 100
+            v for k, v in COLUMNAS_COTIZACIONES.items()
 
-    elif estado == "Falta entrega":
+            if k != "llave"
 
-        progreso = 80
+        ]
 
-    elif estado == "Falta OC":
+        if cotizaciones_items.empty:
 
-        progreso = 45
+            aviso(
+                "No se encontró detalle de cotizaciones para esta solicitud "
+                "en la hoja 'Cotizaciones'."
+            )
 
-    elif estado == "Falta cotización":
+        else:
 
-        progreso = 20
+            montos_cot = [
 
-    else:
+                COLUMNAS_COTIZACIONES["valor_un_neto"],
 
-        progreso = 10
+                COLUMNAS_COTIZACIONES["subtotal"],
 
-    st.progress(progreso/100)
+                COLUMNAS_COTIZACIONES["iva"],
 
-    st.write(f"Avance del proceso: **{progreso}%**")
+                COLUMNAS_COTIZACIONES["totales"]
 
-    col = st.columns(5)
+            ]
 
-    col[0].success("Requisición")
+            kpis([
 
-    if pd.notna(detalle.iloc[0][COLUMNAS["fecha_cot"]]):
-        col[1].success("Cotización")
-    else:
-        col[1].warning("Pendiente")
+                {"etiqueta": "Total neto",
+                 "valor": moneda(cotizaciones_items[COLUMNAS_COTIZACIONES["subtotal"]].sum())},
 
-    if pd.notna(detalle.iloc[0][COLUMNAS["fecha_oc"]]):
-        col[2].success("OC")
-    else:
-        col[2].warning("Pendiente")
+                {"etiqueta": "IVA",
+                 "valor": moneda(cotizaciones_items[COLUMNAS_COTIZACIONES["iva"]].sum())},
 
-    if pd.notna(detalle.iloc[0][COLUMNAS["fecha_pago"]]):
-        col[3].success("Pago")
-    else:
-        col[3].warning("Pendiente")
+                {"etiqueta": "Total (neto + IVA)",
+                 "valor": moneda(cotizaciones_items[COLUMNAS_COTIZACIONES["totales"]].sum()),
+                 "tono": "info"},
 
-    if pd.notna(detalle.iloc[0][COLUMNAS["fecha_entrega"]]):
-        col[4].success("Entrega")
-    else:
-        col[4].warning("Pendiente")
+                {"etiqueta": "Proveedores",
+                 "valor": f"{cotizaciones_items[COLUMNAS_COTIZACIONES['proveedor']].nunique():,}"},
 
-    st.divider()
+            ])
 
-    # ==================================================
-    # ÍTEMS DE LA REQUISICIÓN (hoja "Requisiciones")
-    # ==================================================
+            tabla_html(
 
-    st.subheader("Ítems de la Requisición")
+                cotizaciones_items[columnas_cotizacion],
 
-    items_requisicion = requisiciones_df[
+                moneda_cols=montos_cot,
 
-        requisiciones_df[COLUMNAS_REQUISICIONES["llave"]]
+                estado_cols=[COLUMNAS_COTIZACIONES["estado"]],
 
-        .isin(ordenes_sel)
+                totales=montos_cot[1:]
 
-    ]
+            )
 
-    columnas_requisicion = [
+            st.download_button(
 
-        v for k, v in COLUMNAS_REQUISICIONES.items()
+                "Descargar cotizaciones (.xlsx)",
 
-        if k != "llave"
+                exportar_excel(
 
-    ]
+                    cotizaciones_items[columnas_cotizacion],
 
-    if items_requisicion.empty:
+                    nombre_hoja="Cotizaciones"
 
-        st.info(
-            "No se encontró detalle de productos para esta requisición "
-            "en la hoja 'Requisiciones'."
-        )
+                ),
 
-    else:
+                "cotizaciones.xlsx",
 
-        st.dataframe(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 
-            items_requisicion[columnas_requisicion],
+                key="descargar_cotizaciones"
 
-            width="stretch",
+            )
 
-            hide_index=True
+        # ==================================================
+        # DETALLE DE LA SOLICITUD (Detalle solicitudes OC.xlsx)
+        # ==================================================
 
-        )
+        seccion("Detalle de la solicitud")
 
-    csv_requisicion = (
+        if detalle_items.empty:
 
-        items_requisicion[columnas_requisicion]
+            aviso(
+                "No se encontró detalle de ítems para esta solicitud "
+                "en 'Detalle solicitudes OC.xlsx'."
+            )
 
-        .to_csv(index=False)
+        else:
 
-        .encode("utf-8-sig")
+            tabla_html(
 
-    )
+                detalle_items[columnas_detalle],
 
-    st.download_button(
+                moneda_cols=[
 
-        "📥 Descargar ítems de la requisición",
+                    COLUMNAS_DETALLE_OC["valor_unitario"],
 
-        csv_requisicion,
+                    COLUMNAS_DETALLE_OC["valor_neto"]
 
-        "items_requisicion.csv",
+                ],
 
-        "text/csv",
+                estado_cols=[COLUMNAS_DETALLE_OC["estado_gestion"]],
 
-        key="descargar_items_requisicion"
+                totales=[COLUMNAS_DETALLE_OC["valor_neto"]]
 
-    )
+            )
 
-    # ==================================================
-    # COTIZACIONES (hoja "Cotizaciones")
-    # ==================================================
+            st.download_button(
 
-    st.divider()
+                "Descargar detalle (.csv)",
 
-    st.subheader("Cotizaciones")
+                detalle_items[columnas_detalle]
+                .to_csv(index=False)
+                .encode("utf-8-sig"),
 
-    cotizaciones_items = cotizaciones_df[
+                "detalle_solicitud.csv",
 
-        cotizaciones_df[COLUMNAS_COTIZACIONES["llave"]]
+                "text/csv",
 
-        .isin(ordenes_sel)
+                key="descargar_detalle_oc"
 
-    ]
+            )
 
-    columnas_cotizacion = [
-
-        v for k, v in COLUMNAS_COTIZACIONES.items()
-
-        if k != "llave"
-
-    ]
-
-    if cotizaciones_items.empty:
-
-        st.info(
-            "No se encontró detalle de cotizaciones para esta solicitud "
-            "en la hoja 'Cotizaciones'."
-        )
-
-    else:
-
-        st.dataframe(
-
-            cotizaciones_items[columnas_cotizacion],
-
-            width="stretch",
-
-            hide_index=True
-
-        )
-
-        total_neto_cot = cotizaciones_items[COLUMNAS_COTIZACIONES["subtotal"]].sum()
-
-        total_iva_cot = cotizaciones_items[COLUMNAS_COTIZACIONES["totales"]].sum()
-
-        fila_totales = st.columns(2)
-
-        fila_totales[0].metric(
-
-            "Total Neto",
-
-            f"${total_neto_cot:,.0f}"
-
-        )
-
-        fila_totales[1].metric(
-
-            "Total (Neto + IVA)",
-
-            f"${total_iva_cot:,.0f}"
-
-        )
-
-    excel_cotizaciones = exportar_excel(
-
-        cotizaciones_items[columnas_cotizacion],
-
-        nombre_hoja="Cotizaciones"
-
-    )
-
-    st.download_button(
-
-        "📥 Descargar cotizaciones",
-
-        excel_cotizaciones,
-
-        "cotizaciones.xlsx",
-
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-
-        key="descargar_cotizaciones"
-
-    )
-
-    # ==================================================
-    # TABLA DE ÍTEMS (Detalle solicitudes OC.xlsx)
-    # ==================================================
-
-    st.divider()
-
-    st.subheader("Detalle de la Solicitud")
-
-    if detalle_items.empty:
-
-        st.info(
-            "No se encontró detalle de ítems para esta solicitud "
-            "en 'Detalle solicitudes OC.xlsx'."
-        )
-
-    else:
-
-        st.dataframe(
-
-            detalle_items[columnas_detalle],
-
-            width="stretch",
-
-            hide_index=True
-
-        )
-
-    # ==================================================
-    # EXPORTAR
-    # ==================================================
-
-    csv = (
-
-        detalle_items[columnas_detalle]
-
-        .to_csv(index=False)
-
-        .encode("utf-8-sig")
-
-    )
-
-    st.download_button(
-
-        "📥 Descargar detalle",
-
-        csv,
-
-        "detalle_solicitud.csv",
-
-        "text/csv",
-
-        key="descargar_detalle_oc"
-
-    )
-    
-    # =====================================================
+# =====================================================
 # TAB 3 - ANÁLISIS
 # =====================================================
 
 with tab3:
 
-    st.subheader("📈 Análisis de Compras")
+    seccion("Análisis de compras")
 
     #---------------------------------------------------
     # Evolución mensual
@@ -1524,13 +1371,17 @@ with tab3:
 
     )
 
-    st.dataframe(
+    seccion("Resumen por empresa y contrato")
 
-        resumen,
+    tabla_html(
 
-        width="stretch",
+        resumen.sort_values("Monto", ascending=False),
 
-        hide_index=True
+        moneda_cols=["Monto"],
+
+        decimales={"Tiempo": 1},
+
+        totales=["Requisiciones", "OC", "Monto"]
 
     )
 
@@ -1540,7 +1391,7 @@ with tab3:
 
 with tab4:
 
-    st.subheader("📋 Base Completa")
+    seccion("Base completa", "Todos los registros con los filtros aplicados.")
 
     texto = st.text_input(
 
@@ -1580,17 +1431,58 @@ with tab4:
 
     )
 
-    st.dataframe(
+    vista_grande = st.toggle(
 
-        base,
+        "Letra grande (para presentar)",
 
-        width="stretch",
+        value=False,
 
-        height=650,
-
-        hide_index=True
+        help="Muestra la base como tabla de lectura con letra grande. "
+             "La vista normal permite ordenar y ajustar columnas."
 
     )
+
+    if vista_grande:
+
+        LIMITE_FILAS = 300
+
+        if len(base) > LIMITE_FILAS:
+
+            aviso(
+                f"Se muestran las primeras {LIMITE_FILAS} filas. "
+                "Use el buscador o los filtros para acotar.",
+                "info"
+            )
+
+        tabla_html(
+
+            base.head(LIMITE_FILAS),
+
+            moneda_cols=[COLUMNAS["monto"]],
+
+            estado_cols=[COLUMNAS["estado"]],
+
+            alto_max=720,
+
+            una_linea=True
+
+        )
+
+    else:
+
+        st.dataframe(
+
+            base,
+
+            width="stretch",
+
+            height=650,
+
+            row_height=40,
+
+            hide_index=True
+
+        )
 
     st.divider()
 
@@ -1622,7 +1514,7 @@ with tab4:
 
     st.download_button(
 
-        "📥 Descargar Excel",
+        "Descargar Excel",
 
         archivo.getvalue(),
 
@@ -1644,6 +1536,6 @@ with c2:
 
     st.caption(
 
-        "Dashboard de Compras v2.0 | Desarrollado con Streamlit"
+        "Dashboard de Compras v3.0"
 
     )

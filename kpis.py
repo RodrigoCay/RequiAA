@@ -17,6 +17,8 @@ import pandas as pd
 
 from config import COLUMNAS
 
+from ui import kpis, aviso
+
 
 # ======================================================
 # FORMATO MONEDA
@@ -86,93 +88,80 @@ def mostrar_kpis(df):
 
     k = obtener_kpis(df)
 
-    fila1 = st.columns(4)
+    total = len(df)
 
-    fila1[0].metric(
-        "📋 Requisiciones",
-        f"{k['requisiciones']:,}"
-    )
+    def pct(n):
 
-    fila1[1].metric(
-        "🛒 Cotizaciones",
-        f"{k['cotizaciones']:,}"
-    )
+        return f"{n / total * 100:.0f}% de los registros" if total else ""
 
-    fila1[2].metric(
-        "📦 Órdenes Compra",
-        f"{k['oc']:,}"
-    )
-
-    fila1[3].metric(
-        "💰 Monto Total",
-        formato_moneda(k["monto"])
-    )
-
-    st.markdown("")
-
-    fila2 = st.columns(4)
-
-    fila2[0].metric(
-        "✅ Completadas",
-        f"{k['completadas']:,}"
-    )
-
-    fila2[1].metric(
-        "🟡 Pendientes",
-        f"{k['pendientes']:,}"
-    )
-
-    fila2[2].metric(
-        "💳 Sin Pago",
-        f"{k['sin_pago']:,}"
-    )
-
-    fila2[3].metric(
-        "🚚 Sin Entrega",
-        f"{k['sin_entrega']:,}"
-    )
-
-    st.markdown("")
-
-    fila3 = st.columns(2)
-
-    fila3[0].metric(
-        "⏱ Tiempo Ciclo Promedio",
-        f"{k['tiempo']} días"
-    )
-
-    porcentaje = 0
+    cumplimiento = 0
 
     if k["requisiciones"] > 0:
 
-        porcentaje = (
-            k["completadas"] /
-            k["requisiciones"]
-        ) * 100
+        # Requisiciones únicas con proceso completo / total de
+        # requisiciones únicas (antes se dividían filas por
+        # requisiciones y podía dar más de 100%).
+        req_completas = df.loc[
+            df[COLUMNAS["estado"]] == "Proceso OC completo",
+            COLUMNAS["requisiciones"]
+        ].nunique()
 
-    fila3[1].metric(
-        "📈 Cumplimiento",
-        f"{porcentaje:.1f}%"
-    )
+        cumplimiento = req_completas / k["requisiciones"] * 100
+
+    tiempo = "—" if pd.isna(k["tiempo"]) else f"{k['tiempo']} <small>días</small>"
+
+    kpis([
+
+        {"etiqueta": "Requisiciones", "valor": f"{k['requisiciones']:,}"},
+
+        {"etiqueta": "Cotizaciones", "valor": f"{k['cotizaciones']:,}"},
+
+        {"etiqueta": "Órdenes de compra", "valor": f"{k['oc']:,}"},
+
+        {"etiqueta": "Monto total", "valor": formato_moneda(k["monto"]), "tono": "info"},
+
+    ])
+
+    kpis([
+
+        {"etiqueta": "Completadas", "valor": f"{k['completadas']:,}",
+         "detalle": pct(k["completadas"]), "tono": "ok"},
+
+        {"etiqueta": "Pendientes", "valor": f"{k['pendientes']:,}",
+         "detalle": pct(k["pendientes"]), "tono": "warn"},
+
+        {"etiqueta": "Sin pago", "valor": f"{k['sin_pago']:,}",
+         "detalle": pct(k["sin_pago"]), "tono": "warn"},
+
+        {"etiqueta": "Sin entrega", "valor": f"{k['sin_entrega']:,}",
+         "detalle": pct(k["sin_entrega"]), "tono": "danger"},
+
+    ])
+
+    kpis([
+
+        {"etiqueta": "Tiempo de ciclo promedio", "valor": tiempo},
+
+        {"etiqueta": "Cumplimiento", "valor": f"{cumplimiento:.1f}%",
+         "detalle": "Requisiciones con proceso completo"},
+
+        {"etiqueta": "Empresas solicitantes",
+         "valor": f"{df[COLUMNAS['empresa_sol']].nunique():,}"},
+
+        {"etiqueta": "Contratos",
+         "valor": f"{df[COLUMNAS['contrato']].nunique():,}"},
+
+    ])
 
 
 # ======================================================
 # RESUMEN
 # ======================================================
+# (Empresas y contratos ahora van como tarjetas KPI.)
 
 def mostrar_resumen(df):
 
-    c1, c2, c3 = st.columns(3)
-
-    c1.info(f"Registros : {len(df):,}")
-
-    c2.info(
-        f"Empresas : {df[COLUMNAS['empresa_sol']].nunique()}"
-    )
-
-    c3.info(
-        f"Contratos : {df[COLUMNAS['contrato']].nunique()}"
-    )
+    return
 
 
 # ======================================================
@@ -188,20 +177,16 @@ def mostrar_alertas(df):
         ]
     )
 
-    if pendientes > 0:
-
-        st.warning(
-            f"⚠ Existen {pendientes} procesos pendientes."
-        )
-
     sin_entrega = len(
         df[
             df[COLUMNAS["fecha_entrega"]].isna()
         ]
     )
 
+    if pendientes > 0:
+
+        aviso(f"Hay {pendientes:,} procesos pendientes de completar.", "warn")
+
     if sin_entrega > 0:
 
-        st.error(
-            f"🚚 Existen {sin_entrega} órdenes sin entrega."
-        )
+        aviso(f"Hay {sin_entrega:,} órdenes sin fecha de entrega.", "danger")
