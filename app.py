@@ -32,25 +32,229 @@ def exportar_excel(df, nombre_hoja="Datos"):
     return buffer.getvalue()
 
 # =====================================================
-# ESTILO DE ETIQUETAS DE DATOS (PLOTLY)
+# ESTILO DE GRÁFICOS (PLOTLY) - FONDO BLANCO / MODO PRESENTACIÓN
 # =====================================================
-# Sin esto, Plotly elige automáticamente el color del texto
-# (blanco o gris) según el contraste con cada barra/segmento,
-# lo que hace que las etiquetas se vean inconsistentes entre
-# sí. Esta función fuerza siempre el mismo color y tamaño.
+# Todos los gráficos pasan por estilo_grafico() para que se
+# vean iguales: fondo blanco, texto negro y letras grandes
+# para que se lean bien al proyectar.
 
-def aplicar_estilo_texto(fig, tamano=14, color="#FFFFFF", min_size=12):
+import plotly.express as px
 
-    fig.update_traces(
-        textfont=dict(color=color, size=tamano)
-    )
+TEXTO_GRAFICO = "#111111"
+
+GRILLA_GRAFICO = "#E3E7ED"
+
+# Paleta de colores intensos: se leen bien sobre blanco y
+# permiten texto blanco encima (sin tonos pastel).
+PALETA = [
+    "#0B4F8A",  # azul
+    "#C0392B",  # rojo
+    "#1E8449",  # verde
+    "#D68910",  # naranjo
+    "#6C3483",  # morado
+    "#117A8B",  # turquesa
+    "#A04000",  # café
+    "#34495E",  # gris azulado
+    "#B03A7A",  # fucsia
+    "#7D8C10",  # oliva
+]
+
+px.defaults.template = "plotly_white"
+
+px.defaults.color_discrete_sequence = PALETA
+
+
+def estilo_grafico(fig, titulo, altura=480):
 
     fig.update_layout(
-        uniformtext_minsize=min_size,
-        uniformtext_mode="hide"
+
+        title=dict(
+            text=titulo,
+            font=dict(size=24, color=TEXTO_GRAFICO),
+            x=0,
+            xanchor="left"
+        ),
+
+        font=dict(
+            family="Segoe UI, Arial, sans-serif",
+            size=16,
+            color=TEXTO_GRAFICO
+        ),
+
+        paper_bgcolor="#FFFFFF",
+
+        plot_bgcolor="#FFFFFF",
+
+        height=altura,
+
+        margin=dict(l=10, r=20, t=80, b=10),
+
+        legend=dict(font=dict(size=16, color=TEXTO_GRAFICO)),
+
+        hoverlabel=dict(font_size=16),
+
+        piecolorway=PALETA
+
+    )
+
+    ejes = dict(
+        tickfont=dict(size=15, color=TEXTO_GRAFICO),
+        title_font=dict(size=17, color=TEXTO_GRAFICO),
+        gridcolor=GRILLA_GRAFICO,
+        linecolor="#9AA3AF",
+        automargin=True
+    )
+
+    fig.update_xaxes(**ejes)
+
+    fig.update_yaxes(**ejes)
+
+    # Barras: etiqueta fuera de la barra, en negro (si va dentro
+    # en blanco, en barras cortas no se alcanza a leer).
+    fig.update_traces(
+        selector=dict(type="bar"),
+        textposition="outside",
+        textfont=dict(size=17, color=TEXTO_GRAFICO),
+        constraintext="none",
+        cliponaxis=False
+    )
+
+    # Deja espacio extra sobre/al lado de la barra más grande
+    # para que su etiqueta no quede cortada.
+    barras = [t for t in fig.data if t.type == "bar"]
+
+    if barras:
+
+        horizontal = barras[0].orientation == "h"
+
+        valores = pd.to_numeric(
+            pd.Series([
+                v for t in barras
+                for v in ((t.x if horizontal else t.y) if (t.x if horizontal else t.y) is not None else [])
+            ]),
+            errors="coerce"
+        )
+
+        maximo = valores.max()
+
+        if pd.notna(maximo) and maximo > 0:
+
+            eje = fig.update_xaxes if horizontal else fig.update_yaxes
+
+            eje(range=[0, maximo * 1.22])
+
+    # Donas: porcentaje en blanco sobre colores intensos; los
+    # nombres van en la leyenda.
+    fig.update_traces(
+        selector=dict(type="pie"),
+        textinfo="percent",
+        textposition="inside",
+        insidetextorientation="horizontal",
+        textfont=dict(size=18, color="#FFFFFF"),
+        marker=dict(line=dict(color="#FFFFFF", width=2))
+    )
+
+    # Líneas: más gruesas y con marcadores grandes.
+    fig.update_traces(
+        selector=dict(type="scatter"),
+        line=dict(width=4),
+        marker=dict(size=10)
+    )
+
+    if any(t.type == "pie" for t in fig.data):
+
+        fig.update_layout(
+            uniformtext_minsize=14,
+            uniformtext_mode="hide"
+        )
+
+    return fig
+
+
+# =====================================================
+# AYUDAS PARA GRÁFICOS
+# =====================================================
+
+import textwrap
+
+
+def envolver(texto, ancho=14):
+
+    # Parte etiquetas largas en varias líneas para no tener
+    # que girarlas (el texto inclinado se lee mal al proyectar).
+    return "<br>".join(textwrap.wrap(str(texto), ancho)) or str(texto)
+
+
+def etiquetas_horizontales(fig, categorias, ancho=14):
+
+    fig.update_xaxes(
+        tickangle=0,
+        tickvals=list(categorias),
+        ticktext=[envolver(c, ancho) for c in categorias]
     )
 
     return fig
+
+
+def barras_horizontales(datos, categoria, valor, titulo, color=None):
+
+    # Barras acostadas: los nombres largos (zonas, contratos,
+    # proveedores) se leen completos y en horizontal.
+    fig = px.bar(
+
+        datos,
+
+        x=valor,
+
+        y=categoria,
+
+        orientation="h",
+
+        text="Etiqueta",
+
+        color_discrete_sequence=[color or PALETA[0]]
+
+    )
+
+    fig.update_yaxes(categoryorder="total ascending", title=None)
+
+    # Nombres muy largos se recortan en el eje (el nombre
+    # completo aparece al pasar el mouse).
+    nombres = list(datos[categoria].astype(str))
+
+    fig.update_yaxes(
+        tickvals=nombres,
+        ticktext=[n if len(n) <= 30 else n[:28].rstrip() + "…" for n in nombres]
+    )
+
+    altura = max(420, 150 + 44 * len(datos))
+
+    return estilo_grafico(fig, titulo, altura=altura)
+
+
+def mapa_colores(*series):
+
+    # Mismo color para la misma empresa en todos los gráficos.
+    valores = sorted(
+        set().union(*[set(s.dropna().astype(str).unique()) for s in series])
+    )
+
+    return {v: PALETA[i % len(PALETA)] for i, v in enumerate(valores)}
+
+
+def fmt_fecha(valor):
+
+    if pd.isna(valor):
+
+        return "Pendiente"
+
+    try:
+
+        return pd.to_datetime(valor).strftime(DATE_FORMAT)
+
+    except Exception:
+
+        return str(valor)
 
 # =====================================================
 # CONFIGURACIÓN STREAMLIT
@@ -60,7 +264,7 @@ st.set_page_config(
     page_title="Dashboard Compras",
     page_icon="📦",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # =====================================================
@@ -120,123 +324,77 @@ with col2:
 st.divider()
 
 # =====================================================
-# SIDEBAR
+# FILTROS (arriba, en desplegables)
 # =====================================================
+# Antes estaban en la barra lateral, que se colapsa y no se
+# puede volver a abrir porque el encabezado está oculto.
+# Ahora quedan siempre visibles bajo el título.
 
-st.sidebar.image(
-    "https://img.icons8.com/fluency/96/purchase-order.png",
-    width=80
-)
+FILTROS = [
 
-st.sidebar.title("Filtros")
+    ("zona", "Zona"),
 
-# -----------------------------------------------------
+    ("contrato", "Contrato"),
 
-zona = st.sidebar.multiselect(
+    ("empresa_sol", "Empresa Solicitante"),
 
-    "Zona",
+    ("empresa_compra", "Empresa Compra"),
 
-    sorted(
+    ("estado", "Estado"),
 
-        df[COLUMNAS["zona"]]
+    ("tipo_pago", "Tipo de Pago")
 
-        .dropna()
+]
 
-        .unique()
 
+def limpiar_filtros():
+
+    for clave, _ in FILTROS:
+
+        st.session_state[f"filtro_{clave}"] = []
+
+
+total_registros = len(df)
+
+with st.container(border=True):
+
+    cab1, cab2 = st.columns([5, 1], vertical_alignment="center")
+
+    cab1.markdown("### 🔍 Filtros")
+
+    cab2.button(
+        "Limpiar filtros",
+        on_click=limpiar_filtros,
+        width="stretch"
     )
 
-)
+    columnas_filtro = st.columns(3) + st.columns(3)
 
-# -----------------------------------------------------
+    seleccion = {}
 
-contrato = st.sidebar.multiselect(
+    for col_ui, (clave, etiqueta) in zip(columnas_filtro, FILTROS):
 
-    "Contrato",
+        opciones = sorted(
 
-    sorted(
+            df[COLUMNAS[clave]]
 
-        df[COLUMNAS["contrato"]]
+            .dropna()
 
-        .dropna()
+            .unique()
 
-        .unique()
+        )
 
-    )
+        seleccion[clave] = col_ui.multiselect(
 
-)
+            etiqueta,
 
-# -----------------------------------------------------
+            opciones,
 
-empresa = st.sidebar.multiselect(
+            key=f"filtro_{clave}",
 
-    "Empresa Solicitante",
+            placeholder="Todos"
 
-    sorted(
-
-        df[COLUMNAS["empresa_sol"]]
-
-        .dropna()
-
-        .unique()
-
-    )
-
-)
-
-# -----------------------------------------------------
-
-empresa_compra = st.sidebar.multiselect(
-
-    "Empresa Compra",
-
-    sorted(
-
-        df[COLUMNAS["empresa_compra"]]
-
-        .dropna()
-
-        .unique()
-
-    )
-
-)
-
-# -----------------------------------------------------
-
-estado = st.sidebar.multiselect(
-
-    "Estado",
-
-    sorted(
-
-        df[COLUMNAS["estado"]]
-
-        .dropna()
-
-        .unique()
-
-    )
-
-)
-
-# -----------------------------------------------------
-
-tipo_pago = st.sidebar.multiselect(
-
-    "Tipo de Pago",
-
-    sorted(
-
-        df[COLUMNAS["tipo_pago"]]
-
-        .dropna()
-
-        .unique()
-
-    )
-
-)
+        )
 
 # =====================================================
 # APLICAR FILTROS
@@ -246,17 +404,17 @@ df = aplicar_filtros(
 
     df,
 
-    zona,
+    seleccion["zona"],
 
-    contrato,
+    seleccion["contrato"],
 
-    empresa,
+    seleccion["empresa_sol"],
 
-    empresa_compra,
+    seleccion["empresa_compra"],
 
-    estado,
+    seleccion["estado"],
 
-    tipo_pago
+    seleccion["tipo_pago"]
 
 )
 
@@ -264,29 +422,17 @@ df = aplicar_filtros(
 # INFORMACIÓN DEL ARCHIVO
 # =====================================================
 
-with st.sidebar.expander("Información"):
+st.markdown(
 
-    st.write(f"**Archivo:** {EXCEL_FILE.name}")
+    f"**Mostrando {len(df):,} de {total_registros:,} registros** · "
 
-    st.write(f"**Hoja:** {SHEET_NAME}")
+    f"Requisiciones: **{df[COLUMNAS['requisiciones']].nunique():,}** · "
 
-    st.write(f"**Registros:** {len(df):,}")
+    f"OC: **{df[COLUMNAS['oc']].nunique():,}** · "
 
-    st.write(
+    f"Archivo: {EXCEL_FILE.name} (hoja {SHEET_NAME})"
 
-        f"**Requisiciones:** "
-
-        f"{df[COLUMNAS['requisiciones']].nunique():,}"
-
-    )
-
-    st.write(
-
-        f"**OC:** "
-
-        f"{df[COLUMNAS['oc']].nunique():,}"
-
-    )
+)
 
 # =====================================================
 # TABS
@@ -330,8 +476,6 @@ with tab1:
     # GRÁFICOS
     # ==================================================
 
-    import plotly.express as px
-
     col1,col2 = st.columns(2)
 
     #--------------------------------------------
@@ -370,31 +514,23 @@ with tab1:
 
             color=COLUMNAS["estado"],
 
-            text="Cantidad",
+            color_discrete_map=COLOR_ESTADOS,
 
-            template="plotly_dark"
-
-        )
-
-        fig.update_layout(
-
-            title="Estado de las Requisiciones",
-
-            showlegend=False,
-
-            paper_bgcolor="#000000",
-
-            plot_bgcolor="#000000"
+            text="Cantidad"
 
         )
 
-        fig = aplicar_estilo_texto(fig)
+        fig.update_layout(showlegend=False)
+
+        fig = etiquetas_horizontales(fig, estado_df[COLUMNAS["estado"]], ancho=12)
+
+        fig = estilo_grafico(fig, "Estado de las Requisiciones")
 
         st.plotly_chart(
 
             fig,
 
-            use_container_width=True
+            width="stretch"
 
         )
 
@@ -424,27 +560,17 @@ with tab1:
 
             names=COLUMNAS["tipo_pago"],
 
-            hole=.55,
-
-            template="plotly_dark"
+            hole=.5
 
         )
 
-        fig.update_layout(
-
-            title="Tipo de Pago",
-
-            paper_bgcolor="#000000"
-
-        )
-
-        fig = aplicar_estilo_texto(fig)
+        fig = estilo_grafico(fig, "Tipo de Pago")
 
         st.plotly_chart(
 
             fig,
 
-            use_container_width=True
+            width="stretch"
 
         )
 
@@ -478,41 +604,27 @@ with tab1:
 
         )
 
-        fig = px.bar(
+        zona_df["Etiqueta"] = zona_df[COLUMNAS["monto"]].apply(formato_moneda)
+
+        fig = barras_horizontales(
 
             zona_df,
 
-            x=COLUMNAS["zona"],
+            COLUMNAS["zona"],
 
-            y=COLUMNAS["monto"],
+            COLUMNAS["monto"],
 
-            color=COLUMNAS["zona"],
+            "Monto por Zona",
 
-            template="plotly_dark",
-
-            text_auto=".2s"
+            color=PALETA[5]
 
         )
-
-        fig.update_layout(
-
-            title="Monto por Zona",
-
-            showlegend=False,
-
-            paper_bgcolor="#000000",
-
-            plot_bgcolor="#000000"
-
-        )
-
-        fig = aplicar_estilo_texto(fig)
 
         st.plotly_chart(
 
             fig,
 
-            use_container_width=True
+            width="stretch"
 
         )
 
@@ -544,41 +656,25 @@ with tab1:
 
         )
 
-        fig = px.bar(
+        contrato_df["Etiqueta"] = contrato_df[COLUMNAS["monto"]].apply(formato_moneda)
+
+        fig = barras_horizontales(
 
             contrato_df,
 
-            x=COLUMNAS["monto"],
+            COLUMNAS["contrato"],
 
-            y=COLUMNAS["contrato"],
+            COLUMNAS["monto"],
 
-            orientation="h",
-
-            color=COLUMNAS["monto"],
-
-            template="plotly_dark"
+            "Top 10 Contratos"
 
         )
-
-        fig.update_layout(
-
-            title="Top 10 Contratos",
-
-            paper_bgcolor="#000000",
-
-            plot_bgcolor="#000000",
-
-            coloraxis_showscale=False
-
-        )
-
-        fig = aplicar_estilo_texto(fig)
 
         st.plotly_chart(
 
             fig,
 
-            use_container_width=True
+            width="stretch"
 
         )
 
@@ -587,6 +683,14 @@ with tab1:
     # ==================================================
     # EMPRESA SOLICITANTE
     # ==================================================
+
+    colores_empresa = mapa_colores(
+
+        df[COLUMNAS["empresa_sol"]],
+
+        df[COLUMNAS["empresa_compra"]]
+
+    )
 
     col1,col2 = st.columns(2)
 
@@ -612,6 +716,8 @@ with tab1:
 
         )
 
+        empresa_df["Etiqueta"] = empresa_df[COLUMNAS["monto"]].apply(formato_moneda)
+
         fig = px.bar(
 
             empresa_df,
@@ -622,31 +728,21 @@ with tab1:
 
             color=COLUMNAS["empresa_sol"],
 
-            template="plotly_dark",
+            color_discrete_map=colores_empresa,
 
-            text_auto=".2s"
-
-        )
-
-        fig.update_layout(
-
-            title="Monto por Empresa Solicitante",
-
-            showlegend=False,
-
-            paper_bgcolor="#000000",
-
-            plot_bgcolor="#000000"
+            text="Etiqueta"
 
         )
 
-        fig = aplicar_estilo_texto(fig)
+        fig.update_layout(showlegend=False)
+
+        fig = estilo_grafico(fig, "Monto por Empresa Solicitante")
 
         st.plotly_chart(
 
             fig,
 
-            use_container_width=True
+            width="stretch"
 
         )
 
@@ -686,33 +782,27 @@ with tab1:
 
             color=COLUMNAS["empresa_sol"],
 
-            template="plotly_dark"
+            color_discrete_map=colores_empresa,
+
+            text_auto=".1f"
 
         )
 
-        fig.update_layout(
+        fig.update_layout(showlegend=False)
 
-            title="Tiempo Promedio de Ciclo",
+        fig.update_yaxes(title="Días promedio")
 
-            showlegend=False,
-
-            paper_bgcolor="#000000",
-
-            plot_bgcolor="#000000"
-
-        )
-
-        fig = aplicar_estilo_texto(fig)
+        fig = estilo_grafico(fig, "Tiempo Promedio de Ciclo")
 
         st.plotly_chart(
 
             fig,
 
-            use_container_width=True
+            width="stretch"
 
         )
-        
-        # =====================================================
+
+# =====================================================
 # TAB 2 - SEGUIMIENTO
 # =====================================================
 
@@ -965,43 +1055,33 @@ with tab2:
 
         st.markdown("### Fechas")
 
-        st.write(
+        st.markdown(
 
-            "**Requisición:**",
-
-            detalle.iloc[0][COLUMNAS["fecha_req"]]
+            f"**Requisición:** {fmt_fecha(detalle.iloc[0][COLUMNAS['fecha_req']])}"
 
         )
 
-        st.write(
+        st.markdown(
 
-            "**Cotización:**",
-
-            detalle.iloc[0][COLUMNAS["fecha_cot"]]
+            f"**Cotización:** {fmt_fecha(detalle.iloc[0][COLUMNAS['fecha_cot']])}"
 
         )
 
-        st.write(
+        st.markdown(
 
-            "**OC:**",
-
-            detalle.iloc[0][COLUMNAS["fecha_oc"]]
+            f"**OC:** {fmt_fecha(detalle.iloc[0][COLUMNAS['fecha_oc']])}"
 
         )
 
-        st.write(
+        st.markdown(
 
-            "**Pago:**",
-
-            detalle.iloc[0][COLUMNAS["fecha_pago"]]
+            f"**Pago:** {fmt_fecha(detalle.iloc[0][COLUMNAS['fecha_pago']])}"
 
         )
 
-        st.write(
+        st.markdown(
 
-            "**Entrega:**",
-
-            detalle.iloc[0][COLUMNAS["fecha_entrega"]]
+            f"**Entrega:** {fmt_fecha(detalle.iloc[0][COLUMNAS['fecha_entrega']])}"
 
         )
 
@@ -1100,7 +1180,7 @@ with tab2:
 
             items_requisicion[columnas_requisicion],
 
-            use_container_width=True,
+            width="stretch",
 
             hide_index=True
 
@@ -1167,7 +1247,7 @@ with tab2:
 
             cotizaciones_items[columnas_cotizacion],
 
-            use_container_width=True,
+            width="stretch",
 
             hide_index=True
 
@@ -1238,7 +1318,7 @@ with tab2:
 
             detalle_items[columnas_detalle],
 
-            use_container_width=True,
+            width="stretch",
 
             hide_index=True
 
@@ -1280,8 +1360,6 @@ with tab3:
 
     st.subheader("📈 Análisis de Compras")
 
-    import plotly.express as px
-
     #---------------------------------------------------
     # Evolución mensual
     #---------------------------------------------------
@@ -1306,29 +1384,17 @@ with tab3:
 
             y=COLUMNAS["monto"],
 
-            markers=True,
-
-            template="plotly_dark"
+            markers=True
 
         )
 
-        fig.update_layout(
-
-            title="Monto Comprado por Período",
-
-            paper_bgcolor="#000000",
-
-            plot_bgcolor="#000000"
-
-        )
-
-        fig = aplicar_estilo_texto(fig)
+        fig = estilo_grafico(fig, "Monto Comprado por Período")
 
         st.plotly_chart(
 
             fig,
 
-            use_container_width=True
+            width="stretch"
 
         )
 
@@ -1358,41 +1424,29 @@ with tab3:
 
             )
 
+            .head(15)
+
         )
 
-        fig = px.bar(
+        empresa["Etiqueta"] = empresa[COLUMNAS["monto"]].apply(formato_moneda)
+
+        fig = barras_horizontales(
 
             empresa,
 
-            x=COLUMNAS["empresa_compra"],
+            COLUMNAS["empresa_compra"],
 
-            y=COLUMNAS["monto"],
+            COLUMNAS["monto"],
 
-            color=COLUMNAS["empresa_compra"],
-
-            template="plotly_dark"
+            "Top 15 Empresas Compra (por monto)"
 
         )
-
-        fig.update_layout(
-
-            title="Monto por Empresa Compra",
-
-            showlegend=False,
-
-            paper_bgcolor="#000000",
-
-            plot_bgcolor="#000000"
-
-        )
-
-        fig = aplicar_estilo_texto(fig)
 
         st.plotly_chart(
 
             fig,
 
-            use_container_width=True
+            width="stretch"
 
         )
 
@@ -1420,27 +1474,17 @@ with tab3:
 
             names=COLUMNAS["tipo_compra"],
 
-            hole=.5,
-
-            template="plotly_dark"
+            hole=.5
 
         )
 
-        fig.update_layout(
-
-            title="Tipo de Compra",
-
-            paper_bgcolor="#000000"
-
-        )
-
-        fig = aplicar_estilo_texto(fig)
+        fig = estilo_grafico(fig, "Tipo de Compra")
 
         st.plotly_chart(
 
             fig,
 
-            use_container_width=True
+            width="stretch"
 
         )
 
@@ -1484,7 +1528,7 @@ with tab3:
 
         resumen,
 
-        use_container_width=True,
+        width="stretch",
 
         hide_index=True
 
@@ -1540,7 +1584,7 @@ with tab4:
 
         base,
 
-        use_container_width=True,
+        width="stretch",
 
         height=650,
 

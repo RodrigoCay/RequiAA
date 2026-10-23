@@ -1,147 +1,235 @@
 /* ==========================================================
-   DASHBOARD COMPRAS - TEMA OSCURO (v2 - anti forced-dark-mode)
+   DASHBOARD COMPRAS - TEMA CLARO (v3 - modo presentación)
    ==========================================================
-   Cambios clave respecto a la versión original:
-   - color-scheme: dark en html/body para que el navegador SEPA
-     que la página ya es oscura y no intente "corregirla".
-   - Se evitan negro puro (#000000) y blanco puro (#FFFFFF) en
-     fondos/textos grandes: los extremos absolutos son los que
-     más gatillan el auto-dark-mode / forced-colors de Edge y
-     Chrome. Se usan #0B0D10 y #F2F3F5 en su lugar.
-   - Selectores duplicados para data-testid viejos y nuevos de
-     Streamlit (metric-container / stMetric), por si la versión
-     de Streamlit cambió el markup.
-   - Bloque @media (forced-colors: active) para modo alto
-     contraste de Windows.
+   - Fondo blanco y texto negro para que se lea bien al
+     proyectar.
+   - Letra base más grande (18px). Streamlit usa "rem", así
+     que todo el texto escala desde html { font-size }.
+   - Los filtros ya no van en la barra lateral: están arriba
+     (ver app.py), así que la barra lateral se oculta.
+   - El tema también está definido en .streamlit/config.toml;
+     este CSS lo refuerza por si el navegador guardó otro tema.
 ========================================================== */
 
 :root{
-  color-scheme: dark;
-  --bg: #0B0D10;
-  --bg-sidebar: #14171A;
-  --bg-card: #1B1F23;
-  --border: #2E3338;
-  --accent: #00B4D8;
-  --accent-hover: #0288D1;
-  --text: #F2F3F5;
-  --text-muted: #ADB3B9;
-  --ok: #2ECC71;
-  --warn: #FFC107;
-  --error: #FF5252;
+  color-scheme: light;
+  --bg: #FFFFFF;
+  --bg-card: #F4F6F9;
+  --border: #C9D1DC;
+  --accent: #0B4F8A;
+  --accent-hover: #083A66;
+  --text: #111111;
+  --text-muted: #3A4350;
+  --ok: #1E8449;
+  --warn: #B9770E;
+  --error: #C0392B;
+}
+
+/* ============================
+   BASE
+============================ */
+
+html{
+    font-size: 18px;
 }
 
 html,
 body,
-[class*="css"] {
-    background-color: var(--bg);
-    color: var(--text);
-    font-family: "Segoe UI", sans-serif;
-    color-scheme: dark;
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stHeader"],
+[data-testid="stBottomBlockContainer"]{
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+    color-scheme: light;
 }
 
-/* Fondo principal */
-.stApp {
-    background-color: var(--bg);
-    color-scheme: dark;
+body,
+.stApp{
+    font-family: "Segoe UI", Arial, sans-serif;
 }
 
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background-color: var(--bg-sidebar);
-    border-right: 1px solid var(--border);
+/* Menos espacio arriba (el encabezado está oculto) */
+.block-container,
+[data-testid="stMainBlockContainer"]{
+    padding-top: 1.2rem !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
 }
 
-/* Títulos */
-h1 {
+/* Barra lateral: ya no se usa */
+section[data-testid="stSidebar"],
+[data-testid="stSidebarCollapsedControl"]{
+    display: none !important;
+}
+
+/* ============================
+   TEXTOS
+============================ */
+
+.stMarkdown p,
+.stMarkdown li,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li{
+    color: var(--text) !important;
+    font-size: 1.05rem;
+}
+
+h1{
     color: var(--accent) !important;
-    font-size: 38px !important;
+    font-size: 2.4rem !important;
     font-weight: 700 !important;
 }
 
-h2, h3, h4 {
+h2{
+    color: var(--text) !important;
+    font-size: 1.9rem !important;
+    font-weight: 700 !important;
+}
+
+h3{
+    color: var(--text) !important;
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+}
+
+h4{
+    color: var(--text) !important;
+    font-size: 1.25rem !important;
+}
+
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p{
+    color: var(--text-muted) !important;
+    font-size: 0.95rem !important;
+}
+
+/* Etiquetas de los controles (filtros, buscadores, radio) */
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label{
+    color: var(--text) !important;
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+}
+
+/* Opciones del radio "Buscar por" */
+[data-testid="stRadio"] label p{
+    font-size: 1.05rem !important;
     color: var(--text) !important;
 }
 
 /* Separadores */
-hr {
-    border: 1px solid var(--border);
+hr{
+    border-color: var(--border) !important;
 }
 
 /* ============================
-   TARJETAS KPI (soporta ambos testid de Streamlit)
+   TARJETAS KPI
 ============================ */
 
 div[data-testid="metric-container"],
 div[data-testid="stMetric"]{
     background: var(--bg-card);
     border: 1px solid var(--border);
-    padding: 18px;
+    border-left: 6px solid var(--accent);
+    padding: 16px 20px;
     border-radius: 12px;
-    box-shadow: 0px 0px 15px rgba(0,0,0,.45);
-    transition: 0.3s;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
 }
 
-div[data-testid="metric-container"]:hover,
-div[data-testid="stMetric"]:hover{
-    border: 1px solid var(--accent);
-    transform: translateY(-3px);
-}
-
-/* Label KPI */
-div[data-testid="metric-container"] label,
-div[data-testid="stMetric"] label,
-div[data-testid="stMetricLabel"]{
+/* Título del KPI */
+div[data-testid="stMetricLabel"],
+div[data-testid="stMetricLabel"] p{
     color: var(--text-muted) !important;
-    font-size: 14px;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
 }
 
-/* Valor KPI */
-div[data-testid="metric-container"] p,
-div[data-testid="stMetric"] p,
-div[data-testid="stMetricValue"]{
+/* Valor del KPI */
+div[data-testid="stMetricValue"],
+div[data-testid="stMetricValue"] div,
+div[data-testid="stMetricValue"] p{
     color: var(--text) !important;
-    font-size: 28px;
-    font-weight: bold;
+    font-size: 2.3rem !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    /* Textos largos (ej. "Proceso OC completo") bajan de línea
+       en vez de cortarse con "..." */
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
 }
 
 /* ============================
    BOTONES
 ============================ */
 
-.stButton button{
-    width: 100%;
-    background: var(--accent);
-    color: var(--text);
+.stButton button,
+.stDownloadButton button{
+    background: var(--accent) !important;
+    color: #FFFFFF !important;
+    border: none !important;
     border-radius: 10px;
-    border: none;
-    font-weight: bold;
-    height: 42px;
+    font-weight: 700;
+    min-height: 44px;
 }
 
-.stButton button:hover{
-    background: var(--accent-hover);
+.stButton button p,
+.stDownloadButton button p{
+    color: #FFFFFF !important;
+    font-size: 1rem !important;
 }
 
-/* ============================
-   SELECTBOX
-============================ */
-
-div[data-baseweb="select"]{
-    background: var(--bg-card);
-    border-radius: 8px;
+.stButton button:hover,
+.stDownloadButton button:hover{
+    background: var(--accent-hover) !important;
 }
 
 /* ============================
-   INPUT
+   DESPLEGABLES (multiselect / selectbox) e INPUTS
+   Los colores de fondo/texto vienen del tema
+   (.streamlit/config.toml); aquí solo se agrega un borde
+   visible para que se distingan bien al proyectar.
 ============================ */
 
-input{
-    background: var(--bg-card) !important;
+[data-testid="stMultiSelect"] [role="group"],
+[data-testid="stSelectbox"] [role="group"],
+[data-testid="stSelectbox"] button,
+[data-testid="stTextInputRootElement"],
+[data-testid="stTextInput"] [data-baseweb="input"],
+div[data-baseweb="select"] > div{
+    border: 1px solid #8C96A3 !important;
+    border-radius: 8px !important;
+    min-height: 46px;
+}
+
+[data-testid="stMultiSelect"] input,
+[data-testid="stSelectbox"] input,
+[data-testid="stTextInput"] input{
     color: var(--text) !important;
+    font-size: 1rem !important;
+}
+
+/* Lista que se abre al hacer clic */
+[role="listbox"] [role="option"],
+div[data-baseweb="popover"] li{
+    color: var(--text) !important;
+    font-size: 1rem !important;
 }
 
 /* ============================
-   DATAFRAME
+   CONTENEDOR DE FILTROS
+============================ */
+
+div[data-testid="stVerticalBlockBorderWrapper"]{
+    background: #FAFBFC;
+    border-color: var(--border) !important;
+    border-radius: 12px !important;
+}
+
+/* ============================
+   TABLAS
 ============================ */
 
 [data-testid="stDataFrame"]{
@@ -150,34 +238,68 @@ input{
 }
 
 /* ============================
-   TABS
+   PESTAÑAS
+   (stTab = Streamlit nuevo; data-baseweb = versiones antiguas)
 ============================ */
 
+[data-testid="stTab"],
 button[data-baseweb="tab"]{
-    background: var(--bg-card);
-    color: var(--text);
-    border-radius: 8px;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-bottom: none !important;
+    border-radius: 10px 10px 0 0 !important;
+    padding: 10px 22px !important;
+    margin-right: 6px !important;
 }
 
+[data-testid="stTab"] p,
+button[data-baseweb="tab"] p{
+    color: var(--text) !important;
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+}
+
+[data-testid="stTab"][aria-selected="true"],
 button[data-baseweb="tab"][aria-selected="true"]{
-    background: var(--accent);
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+}
+
+[data-testid="stTab"][aria-selected="true"] p,
+button[data-baseweb="tab"][aria-selected="true"] p{
+    color: #FFFFFF !important;
 }
 
 /* ============================
-   ALERTAS
+   ALERTAS (info / warning / error / success)
 ============================ */
 
-.stSuccess{ border-radius: 10px; }
-.stWarning{ border-radius: 10px; }
-.stError{ border-radius: 10px; }
+[data-testid="stAlert"],
+[data-testid="stAlertContainer"]{
+    border-radius: 10px;
+}
+
+[data-testid="stAlert"] p,
+[data-testid="stAlertContainer"] p{
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+}
+
+/* ============================
+   BARRA DE PROGRESO
+============================ */
+
+[data-testid="stProgress"] > div > div > div > div{
+    background-color: var(--accent) !important;
+}
 
 /* ============================
    SCROLLBAR
 ============================ */
 
-::-webkit-scrollbar{ width: 10px; }
-::-webkit-scrollbar-track{ background: var(--bg-sidebar); }
-::-webkit-scrollbar-thumb{ background: #3A3F45; border-radius: 10px; }
+::-webkit-scrollbar{ width: 12px; }
+::-webkit-scrollbar-track{ background: #EEF1F5; }
+::-webkit-scrollbar-thumb{ background: #A9B2BE; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover{ background: var(--accent); }
 
 /* ============================
@@ -185,10 +307,14 @@ button[data-baseweb="tab"][aria-selected="true"]{
 ============================ */
 
 details{
-    background: var(--bg-card);
+    background: #FFFFFF;
     border-radius: 8px;
     border: 1px solid var(--border);
-    padding: 8px;
+}
+
+details summary p{
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
 }
 
 /* ============================
@@ -198,7 +324,7 @@ details{
 a{ color: var(--accent) !important; }
 
 /* ============================
-   PIE DE PÁGINA
+   ENCABEZADO / PIE DE STREAMLIT
 ============================ */
 
 footer{ visibility: hidden; }
@@ -218,12 +344,12 @@ header{ visibility: hidden; }
 
 .kpi-title{
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: 1.1rem;
 }
 
 .kpi-value{
     color: var(--text);
-    font-size: 32px;
+    font-size: 2.3rem;
     font-weight: bold;
 }
 
@@ -236,9 +362,7 @@ header{ visibility: hidden; }
 .estado-error{ color: var(--error); font-weight: bold; }
 
 /* ============================
-   FALLBACK: modo alto contraste de Windows / navegadores
-   (forced-colors: active) — evita que el sistema reemplace
-   todo por su paleta de sistema sin control.
+   MODO ALTO CONTRASTE DE WINDOWS
 ============================ */
 @media (forced-colors: active){
     .kpi-card, div[data-testid="metric-container"], div[data-testid="stMetric"]{

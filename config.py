@@ -33,23 +33,23 @@ REQUISICIONES_SHEET = "Requisiciones"
 # COLORES
 # =========================================================
 
-BACKGROUND = "#000000"
+BACKGROUND = "#FFFFFF"
 
-CARD = "#161616"
+CARD = "#F4F6F9"
 
-SIDEBAR = "#111111"
+SIDEBAR = "#F4F6F9"
 
-TEXT = "#FFFFFF"
+TEXT = "#111111"
 
-ACCENT = "#00B4D8"
+ACCENT = "#0B4F8A"
 
-SUCCESS = "#00C853"
+SUCCESS = "#1E8449"
 
-WARNING = "#FFC107"
+WARNING = "#D68910"
 
-DANGER = "#F44336"
+DANGER = "#C0392B"
 
-INFO = "#2196F3"
+INFO = "#2471A3"
 
 # =========================================================
 # ESTADOS
@@ -63,7 +63,11 @@ COLOR_ESTADOS = {
 
     "Falta OC": DANGER,
 
-    "Falta cotización": INFO
+    "Falta cotización": INFO,
+
+    "Falta cotizacion": INFO,
+
+    "OC Anulada": "#7B8794"
 
 }
 
