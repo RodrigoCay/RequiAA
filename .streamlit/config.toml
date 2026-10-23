@@ -1,1 +1,11 @@
+# Tema de la app: fondo blanco, texto negro y letra grande
+# para presentar. Streamlit lee este archivo automáticamente.
 
+[theme]
+base = "light"
+primaryColor = "#0B4F8A"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4F6F9"
+textColor = "#111111"
+font = "sans-serif"
+baseFontSize = 18
