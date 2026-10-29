@@ -32,6 +32,98 @@ from config import (
 
 
 # =====================================================
+# LECTURA RÁPIDA DE EXCEL
+# =====================================================
+# Problema detectado (oct-2026): la hoja "Tabla Control" de
+# Prueba.xlsx quedó registrada hasta la fila 1.048.576 (máximo
+# de Excel) por celdas vacías con formato en las columnas
+# B, F, T-W. pd.read_excel recorría el millón de filas y
+# demoraba ~40 s en cada carga, aunque los datos reales son
+# menos de 1.000 filas.
+#
+# Solución: primero se busca la última fila con datos
+# (lectura en streaming que se detiene al encontrar un bloque
+# largo de filas vacías) y luego se lee solo hasta ahí.
+
+FILAS_VACIAS_PARA_CORTAR = 200
+
+
+def ultima_fila_con_datos(ruta, hoja):
+
+    from openpyxl import load_workbook
+
+    wb = load_workbook(ruta, read_only=True, data_only=True)
+
+    try:
+
+        ws = wb[hoja] if isinstance(hoja, str) else wb.worksheets[hoja]
+
+        ultima = 0
+
+        vacias = 0
+
+        for i, fila in enumerate(ws.iter_rows(values_only=True), start=1):
+
+            if any(v is not None and str(v).strip() != "" for v in fila):
+
+                ultima = i
+
+                vacias = 0
+
+            else:
+
+                vacias += 1
+
+                if vacias >= FILAS_VACIAS_PARA_CORTAR:
+
+                    break
+
+        return ultima
+
+    finally:
+
+        wb.close()
+
+
+def leer_excel(ruta, hoja):
+
+    ultima = ultima_fila_con_datos(ruta, hoja)
+
+    # nrows no cuenta la fila de encabezado
+    return pd.read_excel(
+
+        ruta,
+
+        sheet_name=hoja,
+
+        nrows=max(ultima - 1, 0)
+
+    )
+
+
+# =====================================================
+# FIRMA DEL ARCHIVO (para el caché)
+# =====================================================
+# Antes el caché expiraba cada 60 segundos y se volvía a leer
+# el Excel aunque no hubiera cambiado. Ahora el caché depende
+# de la fecha de modificación y tamaño del archivo: se recarga
+# solo cuando se sube un Excel nuevo al repositorio.
+
+def firma_archivo(ruta):
+
+    ruta = Path(ruta)
+
+    if not ruta.exists():
+
+        return None
+
+    info = ruta.stat()
+
+    return (info.st_mtime_ns, info.st_size)
+
+
+
+# =====================================================
 # VALIDACIÓN DE ARCHIVO
 # =====================================================
 
@@ -299,19 +391,13 @@ def calcular_resumen(df):
 # CARGA PRINCIPAL
 # =====================================================
 
-@st.cache_data(ttl=CACHE_SECONDS)
+@st.cache_data(show_spinner="Cargando datos...", max_entries=2)
 
-def cargar_datos():
+def _cargar_datos(firma):
 
     validar_archivo()
 
-    df = pd.read_excel(
-
-        EXCEL_FILE,
-
-        sheet_name=SHEET_NAME
-
-    )
+    df = leer_excel(EXCEL_FILE, SHEET_NAME)
 
     df.columns = (
 
@@ -343,9 +429,9 @@ def cargar_datos():
 # solicitudes OC.xlsx", hoja "Detalle". Se cruza con la
 # tabla principal mediante la llave "N° de requisición".
 
-@st.cache_data(ttl=CACHE_SECONDS)
+@st.cache_data(show_spinner="Cargando datos...", max_entries=2)
 
-def cargar_detalle_oc():
+def _cargar_detalle_oc(firma):
 
     if not Path(DETALLE_OC_FILE).exists():
 
@@ -353,13 +439,7 @@ def cargar_detalle_oc():
 
         st.stop()
 
-    detalle = pd.read_excel(
-
-        DETALLE_OC_FILE,
-
-        sheet_name=DETALLE_OC_SHEET
-
-    )
+    detalle = leer_excel(DETALLE_OC_FILE, DETALLE_OC_SHEET)
 
     detalle.columns = (
 
@@ -417,9 +497,9 @@ def cargar_detalle_oc():
 # "Requisiciones". Se cruza con la tabla principal
 # mediante la llave "LLave" == "Requisiciones".
 
-@st.cache_data(ttl=CACHE_SECONDS)
+@st.cache_data(show_spinner="Cargando datos...", max_entries=2)
 
-def cargar_requisiciones():
+def _cargar_requisiciones(firma):
 
     if not Path(DETALLE_OC_FILE).exists():
 
@@ -427,13 +507,7 @@ def cargar_requisiciones():
 
         st.stop()
 
-    requisiciones = pd.read_excel(
-
-        DETALLE_OC_FILE,
-
-        sheet_name=REQUISICIONES_SHEET
-
-    )
+    requisiciones = leer_excel(DETALLE_OC_FILE, REQUISICIONES_SHEET)
 
     requisiciones.columns = (
 
@@ -483,9 +557,9 @@ def cargar_requisiciones():
 # "Cotizaciones". Se cruza con la tabla principal mediante
 # la llave "LLave" == "Ordenes" (igual que el detalle de OC).
 
-@st.cache_data(ttl=CACHE_SECONDS)
+@st.cache_data(show_spinner="Cargando datos...", max_entries=2)
 
-def cargar_cotizaciones():
+def _cargar_cotizaciones(firma):
 
     if not Path(DETALLE_OC_FILE).exists():
 
@@ -493,13 +567,7 @@ def cargar_cotizaciones():
 
         st.stop()
 
-    cotizaciones = pd.read_excel(
-
-        DETALLE_OC_FILE,
-
-        sheet_name=COTIZACIONES_SHEET
-
-    )
+    cotizaciones = leer_excel(DETALLE_OC_FILE, COTIZACIONES_SHEET)
 
     cotizaciones.columns = (
 
@@ -608,3 +676,26 @@ def aplicar_filtros(
         df = df[df[COLUMNAS["tipo_pago"]].isin(tipo_pago)]
 
     return df
+
+# =====================================================
+# FUNCIONES PÚBLICAS (las que usa app.py)
+# =====================================================
+
+def cargar_datos():
+
+    return _cargar_datos(firma_archivo(EXCEL_FILE))
+
+
+def cargar_detalle_oc():
+
+    return _cargar_detalle_oc(firma_archivo(DETALLE_OC_FILE))
+
+
+def cargar_requisiciones():
+
+    return _cargar_requisiciones(firma_archivo(DETALLE_OC_FILE))
+
+
+def cargar_cotizaciones():
+
+    return _cargar_cotizaciones(firma_archivo(DETALLE_OC_FILE))
