@@ -15,6 +15,7 @@ from config import *
 from data_loader import *
 from kpis import *
 from ui import *
+from inventario import mostrar_inventario
 
 # =====================================================
 # EXPORTAR DATAFRAME A EXCEL (bytes)
@@ -440,7 +441,7 @@ st.markdown(
 # TABS
 # =====================================================
 
-tab1,tab2,tab3,tab4 = st.tabs(
+tab1,tab2,tab3,tab4,tab5 = st.tabs(
 
     [
 
@@ -450,7 +451,9 @@ tab1,tab2,tab3,tab4 = st.tabs(
 
         "Análisis",
 
-        "Base de datos"
+        "Base de datos",
+
+        "Inventario"
 
     ]
 
@@ -1523,6 +1526,14 @@ with tab4:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
     )
+
+# =====================================================
+# TAB 5 - INVENTARIO (checklists de personas y móviles)
+# =====================================================
+
+with tab5:
+
+    mostrar_inventario(estilo_grafico)
 
 # =====================================================
 # FOOTER

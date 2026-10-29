@@ -56,6 +56,28 @@ def clase_estado(texto):
 
     t = str(texto).lower()
 
+    # Estados del inventario (coincidencia exacta)
+    exactos = {
+
+        "falta": "badge-danger",
+
+        "requiere cambio": "badge-warn",
+
+        "incompleto": "badge-warn",
+
+        "regular": "badge-info",
+
+        "ok": "badge-ok",
+
+        "no aplica": "badge-neutral",
+
+        "revisar": "badge-neutral"
+
+    }
+
+    if t.strip() in exactos:
+        return exactos[t.strip()]
+
     if any(p in t for p in ("anul", "rechaz", "cancel")):
         return "badge-danger"
 

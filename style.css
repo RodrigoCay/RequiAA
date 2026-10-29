@@ -50,7 +50,7 @@ html, body, .stApp,
     color-scheme: light;
 }
 
-body, .stApp, .stApp *:not(code):not(pre){
+body, .stApp, .stApp *:not(code):not(pre):not([data-testid="stIconMaterial"]):not([class*="material-symbols"]){
     font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
