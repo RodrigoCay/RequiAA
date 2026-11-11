@@ -77,6 +77,10 @@ COLOR_ESTADOS = {
 
     "Anulado": "#7B8794",
 
+    "Aprobación parcial": "#8E44AD",
+
+    "Aprobado Comité": "#17A589",
+
     "Rechazada por comité": "#C0392B"
 
 }

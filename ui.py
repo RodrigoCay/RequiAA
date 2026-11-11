@@ -81,6 +81,9 @@ def clase_estado(texto):
     if any(p in t for p in ("anul", "rechaz", "cancel")):
         return "badge-danger"
 
+    if "parcial" in t:
+        return "badge-warn"
+
     if any(p in t for p in ("complet", "entregad", "pagad", "cerrad", "aprob")):
         return "badge-ok"
 

@@ -960,6 +960,10 @@ with tab2:
 
             "Anulado": 0,
 
+            "Aprobación parcial": 60,
+
+            "Aprobado Comité": 35,
+
             "Falta entrega": 80,
 
             "Falta OC": 45,
