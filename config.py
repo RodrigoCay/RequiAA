@@ -15,17 +15,25 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
  
-EXCEL_FILE = BASE_DIR / "Prueba.xlsx"
+# Base generada por "proceso/actualizar_base.py" a partir de las
+# carpetas 01 Requisiciones, 02 Cotizaciones, 03 OC y el Excel de
+# estados. Reemplaza a "Prueba.xlsx" y "Detalle solicitudes OC.xlsx".
+EXCEL_FILE = BASE_DIR / "base_compras.xlsx"
  
-SHEET_NAME = "Tabla Control"
+SHEET_NAME = "Control"
+
+INFO_SHEET = "Info"
+
+# Historial del comité de compras (desde "Acta comité compras.xlsx")
+COMITE_SHEET = "Comité"
 
 # =========================================================
 # ARCHIVO DE DETALLE DE OC (ítems por solicitud)
 # =========================================================
 
-DETALLE_OC_FILE = BASE_DIR / "Detalle solicitudes OC.xlsx"
+DETALLE_OC_FILE = EXCEL_FILE
 
-DETALLE_OC_SHEET = "Detalle"
+DETALLE_OC_SHEET = "Detalle OC"
 
 REQUISICIONES_SHEET = "Requisiciones"
 
@@ -67,7 +75,9 @@ COLOR_ESTADOS = {
 
     "Falta cotizacion": INFO,
 
-    "OC Anulada": "#7B8794"
+    "OC Anulada": "#7B8794",
+
+    "Rechazada por comité": "#C0392B"
 
 }
 
@@ -100,6 +110,10 @@ COLUMNAS = {
     "empresa_sol": "Empresa solicitante",
 
     "empresa_compra": "Empresa compra",
+
+    "proveedor": "Proveedor",
+
+    "n_oc": "N° OC",
 
     "solicitante": "Nombre Solicitante",
 
@@ -134,6 +148,10 @@ COLUMNAS_DETALLE_OC = {
     "llave": "LLave",
 
     "requisicion": "N° de requisición",
+
+    "oc": "OC",
+
+    "proveedor": "Proveedor",
 
     "descripcion": "Descripción",
 

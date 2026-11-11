@@ -304,6 +304,8 @@ requisiciones_df = cargar_requisiciones()
 
 cotizaciones_df = cargar_cotizaciones()
 
+comite_df = cargar_comite()
+
 # =====================================================
 # TITULO
 # =====================================================
@@ -341,7 +343,7 @@ FILTROS = [
 
     ("empresa_sol", "Empresa Solicitante"),
 
-    ("empresa_compra", "Empresa Compra"),
+    ("empresa_compra", "Empresa que compra"),
 
     ("estado", "Estado"),
 
@@ -433,7 +435,7 @@ st.markdown(
 
     f"OC: **{df[COLUMNAS['oc']].nunique():,}** · "
 
-    f"Archivo: {EXCEL_FILE.name} (hoja {SHEET_NAME})"
+    f"Datos actualizados: **{cargar_info().get('Actualizado', 'sin fecha')}**"
 
 )
 
@@ -905,6 +907,16 @@ with tab2:
 
         ]
 
+        # Si se buscó una OC puntual, solo sus ítems (una
+        # requisición puede tener varias OC y de distinta empresa)
+        if tipo_busqueda == "OC":
+
+            detalle_items = detalle_items[
+
+                detalle_items[COLUMNAS_DETALLE_OC["oc"]] == valor
+
+            ]
+
         columnas_detalle = [
 
             v for k, v in COLUMNAS_DETALLE_OC.items()
@@ -994,7 +1006,17 @@ with tab2:
 
                 ("Empresa solicitante", fila[COLUMNAS["empresa_sol"]]),
 
-                ("Empresa compra", fila[COLUMNAS["empresa_compra"]]),
+                ("Empresa que compra", ", ".join(
+
+                    sorted(detalle[COLUMNAS["empresa_compra"]].dropna().astype(str).unique())
+
+                ) or "—"),
+
+                ("Proveedor(es)", ", ".join(
+
+                    sorted(detalle[COLUMNAS["proveedor"]].dropna().astype(str).unique())
+
+                ) or "—"),
 
                 ("Contrato", fila[COLUMNAS["contrato"]]),
 
@@ -1011,6 +1033,89 @@ with tab2:
                 ("Tipo de compra", fila[COLUMNAS["tipo_compra"]]),
 
             ])
+
+        # ==================================================
+        # COMITÉ DE COMPRAS (hoja "Comité")
+        # ==================================================
+
+        seccion("Comité de compras")
+
+        def _dato(columna):
+
+            v = fila.get(columna) if hasattr(fila, "get") else None
+
+            return "—" if v is None or pd.isna(v) or str(v).strip() == "" else v
+
+        historial = (
+
+            comite_df[comite_df["LLave"].isin(ordenes_sel)]
+
+            if not comite_df.empty and "LLave" in comite_df else pd.DataFrame()
+
+        )
+
+        if historial.empty and _dato("Estado comité (resumen)") == "—":
+
+            aviso("Esta solicitud no aparece en el acta del comité.", "info")
+
+        else:
+
+            fecha_ult = _dato("Fecha último comité")
+
+            if fecha_ult != "—":
+
+                fecha_ult = fmt_fecha(fecha_ult)
+
+            kpis([
+
+                {"etiqueta": "Resultado último comité",
+                 "valor": badge(_dato("Resultado comité")) if _dato("Resultado comité") != "—" else "—"},
+
+                {"etiqueta": "Último comité",
+                 "valor": f"<span style='font-size:1.3rem'>{_dato('Último comité')}</span>",
+                 "detalle": fecha_ult if fecha_ult != "—" else ""},
+
+                {"etiqueta": "Veces en comité",
+                 "valor": f"{int(_dato('Comités'))}" if _dato("Comités") != "—" else "0"},
+
+                {"etiqueta": "Estado del pago",
+                 "valor": f"<span style='font-size:1.1rem'>{_dato('Estado del pago')}</span>",
+                 "detalle": f"Proveedor: {_dato('Estado proveedor')}"},
+
+            ])
+
+            ficha("Resumen del comité", [
+
+                ("Estado (resumen)", _dato("Estado comité (resumen)")),
+
+                ("Comentario último comité", _dato("Comentario comité")),
+
+                ("Comentario resumen", _dato("Comentario resumen")),
+
+            ])
+
+            if not historial.empty:
+
+                columnas_hist = [
+
+                    c for c in ["Comité", "Fecha comité", "Resultado comité", "Comentario comité",
+                                "Detalle cotización", "Monto neto comité", "Participantes"]
+
+                    if c in historial
+
+                ]
+
+                tabla_html(
+
+                    historial.sort_values("Fecha comité")[columnas_hist],
+
+                    moneda_cols=["Monto neto comité"],
+
+                    estado_cols=["Resultado comité"],
+
+                    alto_max=420
+
+                )
 
         # ==================================================
         # ÍTEMS DE LA REQUISICIÓN (hoja "Requisiciones")
@@ -1260,7 +1365,7 @@ with tab3:
 
         empresa = (
 
-            df.groupby(COLUMNAS["empresa_compra"])[COLUMNAS["monto"]]
+            df.groupby(COLUMNAS["proveedor"])[COLUMNAS["monto"]]
 
             .sum()
 
@@ -1284,11 +1389,11 @@ with tab3:
 
             empresa,
 
-            COLUMNAS["empresa_compra"],
+            COLUMNAS["proveedor"],
 
             COLUMNAS["monto"],
 
-            "Top 15 Empresas Compra (por monto)"
+            "Top 15 proveedores (por monto)"
 
         )
 

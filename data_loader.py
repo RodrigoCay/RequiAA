@@ -27,7 +27,9 @@ from config import (
     REQUISICIONES_SHEET,
     COLUMNAS_REQUISICIONES,
     COTIZACIONES_SHEET,
-    COLUMNAS_COTIZACIONES
+    COLUMNAS_COTIZACIONES,
+    INFO_SHEET,
+    COMITE_SHEET
 )
 
 
@@ -131,7 +133,11 @@ def validar_archivo():
 
     if not Path(EXCEL_FILE).exists():
 
-        st.error(f"No se encontró el archivo:\n\n{EXCEL_FILE}")
+        st.error(
+            f"No se encontró **{Path(EXCEL_FILE).name}** en el repositorio. "
+            "Genérelo en su PC con *actualizar_base.bat* (carpeta 'proceso') "
+            "y súbalo a GitHub."
+        )
 
         st.stop()
 
@@ -681,6 +687,21 @@ def aplicar_filtros(
 # FUNCIONES PÚBLICAS (las que usa app.py)
 # =====================================================
 
+def cargar_info():
+
+    """Hoja "Info" de la base (fecha de actualización, totales)."""
+
+    try:
+
+        info = pd.read_excel(EXCEL_FILE, sheet_name=INFO_SHEET)
+
+        return dict(zip(info.iloc[:, 0].astype(str), info.iloc[:, 1]))
+
+    except Exception:
+
+        return {}
+
+
 def cargar_datos():
 
     return _cargar_datos(firma_archivo(EXCEL_FILE))
@@ -694,6 +715,32 @@ def cargar_detalle_oc():
 def cargar_requisiciones():
 
     return _cargar_requisiciones(firma_archivo(DETALLE_OC_FILE))
+
+
+@st.cache_data(show_spinner=False, max_entries=2)
+
+def _cargar_comite(firma):
+
+    try:
+
+        comite = pd.read_excel(EXCEL_FILE, sheet_name=COMITE_SHEET)
+
+    except Exception:
+
+        return pd.DataFrame()
+
+    if "Fecha comité" in comite:
+
+        comite["Fecha comité"] = pd.to_datetime(comite["Fecha comité"], errors="coerce")
+
+    return comite
+
+
+def cargar_comite():
+
+    """Historial del comité de compras (una fila por requisición y comité)."""
+
+    return _cargar_comite(firma_archivo(EXCEL_FILE))
 
 
 def cargar_cotizaciones():
