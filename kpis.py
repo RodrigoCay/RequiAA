@@ -62,11 +62,11 @@ def obtener_kpis(df):
     )
 
     kpis["completadas"] = len(
-        df[df[estado] == "Proceso OC completo"]
+        df[df[estado] == "Proceso Completo"]
     )
 
     kpis["pendientes"] = len(
-        df[df[estado] != "Proceso OC completo"]
+        df[df[estado].isin(["Proceso Completo", "Anulado"]) == False]
     )
 
     kpis["sin_pago"] = len(
@@ -102,7 +102,7 @@ def mostrar_kpis(df):
         # requisiciones únicas (antes se dividían filas por
         # requisiciones y podía dar más de 100%).
         req_completas = df.loc[
-            df[COLUMNAS["estado"]] == "Proceso OC completo",
+            df[COLUMNAS["estado"]] == "Proceso Completo",
             COLUMNAS["requisiciones"]
         ].nunique()
 
@@ -173,7 +173,7 @@ def mostrar_alertas(df):
     pendientes = len(
         df[
             df[COLUMNAS["estado"]]
-            != "Proceso OC completo"
+            .isin(["Proceso Completo", "Anulado"]) == False
         ]
     )
 

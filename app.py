@@ -956,7 +956,9 @@ with tab2:
 
         PROGRESO = {
 
-            "Proceso OC completo": 100,
+            "Proceso Completo": 100,
+
+            "Anulado": 0,
 
             "Falta entrega": 80,
 

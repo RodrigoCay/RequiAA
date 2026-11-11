@@ -65,7 +65,7 @@ INFO = "#2471A3"
 
 COLOR_ESTADOS = {
 
-    "Proceso OC completo": SUCCESS,
+    "Proceso Completo": SUCCESS,
 
     "Falta entrega": WARNING,
 
@@ -75,7 +75,7 @@ COLOR_ESTADOS = {
 
     "Falta cotizacion": INFO,
 
-    "OC Anulada": "#7B8794",
+    "Anulado": "#7B8794",
 
     "Rechazada por comité": "#C0392B"
 

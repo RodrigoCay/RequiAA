@@ -368,7 +368,7 @@ def calcular_resumen(df):
 
                     df[COLUMNAS["estado"]]
 
-                    != "Proceso OC completo"
+                    .isin(["Proceso Completo", "Anulado"]) == False
 
                 ]
 
@@ -382,7 +382,7 @@ def calcular_resumen(df):
 
                     df[COLUMNAS["estado"]]
 
-                    == "Proceso OC completo"
+                    == "Proceso Completo"
 
                 ]
 
