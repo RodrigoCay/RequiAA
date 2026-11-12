@@ -16,6 +16,7 @@ from data_loader import *
 from kpis import *
 from ui import *
 from inventario import mostrar_inventario
+from hallazgos import mostrar_hallazgos
 
 # =====================================================
 # EXPORTAR DATAFRAME A EXCEL (bytes)
@@ -443,7 +444,7 @@ st.markdown(
 # TABS
 # =====================================================
 
-tab1,tab2,tab3,tab4,tab5 = st.tabs(
+tab1,tab2,tab3,tab4,tab5,tab6 = st.tabs(
 
     [
 
@@ -455,7 +456,9 @@ tab1,tab2,tab3,tab4,tab5 = st.tabs(
 
         "Base de datos",
 
-        "Inventario"
+        "Inventario",
+
+        "Hallazgos"
 
     ]
 
@@ -1645,6 +1648,14 @@ with tab4:
 with tab5:
 
     mostrar_inventario(estilo_grafico)
+
+# =====================================================
+# TAB 6 - HALLAZGOS (Prevención de Riesgos)
+# =====================================================
+
+with tab6:
+
+    mostrar_hallazgos(estilo_grafico)
 
 # =====================================================
 # FOOTER
