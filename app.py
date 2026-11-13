@@ -17,6 +17,7 @@ from kpis import *
 from ui import *
 from inventario import mostrar_inventario
 from hallazgos import mostrar_hallazgos
+from excel_formato import excel_formato, MIME_XLSX
 
 # =====================================================
 # EXPORTAR DATAFRAME A EXCEL (bytes)
@@ -24,15 +25,13 @@ from hallazgos import mostrar_hallazgos
 # Usado por los botones de descarga que ofrecen .xlsx en
 # vez de .csv.
 
-def exportar_excel(df, nombre_hoja="Datos"):
+def exportar_excel(df, nombre_hoja="Datos", titulo=None):
 
-    buffer = io.BytesIO()
-
-    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-
-        df.to_excel(writer, index=False, sheet_name=nombre_hoja)
-
-    return buffer.getvalue()
+    # Excel con formato de tabla (ver excel_formato.py)
+    return excel_formato(
+        [{"nombre": nombre_hoja, "df": df, "titulo": titulo or nombre_hoja}],
+        filtros=st.session_state.get("_filtros_txt", "")
+    )
 
 # =====================================================
 # ESTILO DE GRÁFICOS (PLOTLY) - FONDO BLANCO / MODO PRESENTACIÓN
@@ -401,6 +400,12 @@ with st.container(border=True):
             placeholder="Todos"
 
         )
+
+# Texto de filtros para el encabezado de los Excel descargados
+st.session_state["_filtros_txt"] = "  ·  ".join(
+    f"{etiqueta}: {', '.join(map(str, seleccion[clave]))}"
+    for clave, etiqueta in FILTROS if seleccion.get(clave)
+) or "Sin filtros (todos los registros)"
 
 # =====================================================
 # APLICAR FILTROS
@@ -1161,15 +1166,17 @@ with tab2:
 
             st.download_button(
 
-                "Descargar ítems (.csv)",
+                "Descargar ítems (.xlsx)",
 
-                items_requisicion[columnas_requisicion]
-                .to_csv(index=False)
-                .encode("utf-8-sig"),
+                exportar_excel(
+                    items_requisicion[columnas_requisicion],
+                    nombre_hoja="Ítems",
+                    titulo=f"Ítems de la requisición – {tipo_busqueda} {valor}"
+                ),
 
-                "items_requisicion.csv",
+                "items_requisicion.xlsx",
 
-                "text/csv",
+                MIME_XLSX,
 
                 key="descargar_items_requisicion"
 
@@ -1255,7 +1262,9 @@ with tab2:
 
                     cotizaciones_items[columnas_cotizacion],
 
-                    nombre_hoja="Cotizaciones"
+                    nombre_hoja="Cotizaciones",
+
+                    titulo=f"Cotizaciones – {tipo_busqueda} {valor}"
 
                 ),
 
@@ -1302,15 +1311,17 @@ with tab2:
 
             st.download_button(
 
-                "Descargar detalle (.csv)",
+                "Descargar detalle (.xlsx)",
 
-                detalle_items[columnas_detalle]
-                .to_csv(index=False)
-                .encode("utf-8-sig"),
+                exportar_excel(
+                    detalle_items[columnas_detalle],
+                    nombre_hoja="Detalle",
+                    titulo=f"Detalle de la solicitud – {tipo_busqueda} {valor}"
+                ),
 
-                "detalle_solicitud.csv",
+                "detalle_solicitud.xlsx",
 
-                "text/csv",
+                MIME_XLSX,
 
                 key="descargar_detalle_oc"
 
@@ -1502,6 +1513,24 @@ with tab3:
 
     )
 
+    st.download_button(
+
+        "Descargar resumen (.xlsx)",
+
+        exportar_excel(
+            resumen.sort_values("Monto", ascending=False),
+            nombre_hoja="Resumen",
+            titulo="Resumen por empresa y contrato"
+        ),
+
+        "resumen_empresa_contrato.xlsx",
+
+        MIME_XLSX,
+
+        key="descargar_resumen_analisis"
+
+    )
+
 # =====================================================
 # TAB 4 - BASE
 # =====================================================
@@ -1607,37 +1636,19 @@ with tab4:
     # EXPORTAR EXCEL
     #---------------------------------------------
 
-    from io import BytesIO
-
-    archivo = BytesIO()
-
-    with pd.ExcelWriter(
-
-        archivo,
-
-        engine="openpyxl"
-
-    ) as writer:
-
-        base.to_excel(
-
-            writer,
-
-            index=False,
-
-            sheet_name="Compras"
-
-        )
-
     st.download_button(
 
         "Descargar Excel",
 
-        archivo.getvalue(),
+        exportar_excel(
+            base,
+            nombre_hoja="Compras",
+            titulo="Base de compras (filtrada)" + (f" – búsqueda: {texto}" if texto else "")
+        ),
 
         file_name="Compras_Filtradas.xlsx",
 
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        mime=MIME_XLSX
 
     )
 
