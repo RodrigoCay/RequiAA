@@ -16,6 +16,8 @@ dejar con el nombre que trae la descarga).
 import io
 
 import pandas as pd
+
+from excel_formato import excel_formato
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
@@ -217,15 +219,9 @@ def _resumir(items, maximo=6):
 
 def _excel(hojas):
 
-    buffer = io.BytesIO()
-
-    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-
-        for nombre, df in hojas.items():
-
-            df.to_excel(writer, index=False, sheet_name=nombre[:31])
-
-    return buffer.getvalue()
+    # Excel con formato de tabla (ver excel_formato.py)
+    return excel_formato(hojas, titulo="Inventario",
+                         filtros="Con los filtros aplicados en la pestaña")
 
 
 def _calidad(calidad):

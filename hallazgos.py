@@ -18,6 +18,8 @@ import io
 from datetime import date
 
 import pandas as pd
+
+from excel_formato import excel_formato
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -87,28 +89,9 @@ def _pct(a, b):
 
 def _excel(hojas):
 
-    buffer = io.BytesIO()
-
-    with pd.ExcelWriter(buffer, engine="openpyxl", datetime_format="DD-MM-YYYY",
-                        date_format="DD-MM-YYYY") as writer:
-
-        for nombre, df in hojas.items():
-
-            df.to_excel(writer, index=False, sheet_name=nombre[:31])
-
-            hoja = writer.sheets[nombre[:31]]
-
-            hoja.freeze_panes = "A2"
-
-            hoja.auto_filter.ref = hoja.dimensions
-
-            for col in hoja.columns:
-
-                largo = max((len(str(c.value)) for c in col[:200] if c.value is not None), default=8)
-
-                hoja.column_dimensions[col[0].column_letter].width = min(max(10, largo + 2), 60)
-
-    return buffer.getvalue()
+    # Excel con formato de tabla (ver excel_formato.py)
+    return excel_formato(hojas, titulo="Hallazgos",
+                         filtros="Con los filtros aplicados en la pestaña")
 
 
 def _resumen(df, por, plazo):

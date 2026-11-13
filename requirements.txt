@@ -4,4 +4,4 @@ openpyxl
 plotly>=6.0,<7
 numpy
 Pillow>=11.3.0
-
+xlsxwriter
