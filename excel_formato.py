@@ -81,25 +81,13 @@ def excel_formato(hojas, titulo="", filtros=""):
         f_tot_lbl = wb.add_format({"font_name": "Calibri", "font_size": 10, "bold": True, "bg_color": "#DBEAFE",
                                    "top": 2, "top_color": AZUL})
 
-        usados = set()
-        for h in hojas:
-            d = h["df"].copy()
-            if not isinstance(d.index, pd.RangeIndex):
-                d = d.reset_index()
-            d.columns = [str(c) for c in d.columns]
-            nombre = "".join(ch for ch in str(h["nombre"]) if ch not in '[]:*?/\\')[:31] or "Hoja"
-            while nombre in usados:
-                nombre = nombre[:28] + f"_{len(usados)}"
-            usados.add(nombre)
-            ws = wb.add_worksheet(nombre)
+        f_bloque = wb.add_format({"font_name": "Calibri", "bold": True, "font_size": 11, "font_color": AZUL,
+                                  "bottom": 2, "bottom_color": AZUL})
+        f_rojo = wb.add_format({"bg_color": "#FADBD8", "font_color": "#922B21", "bold": True})
+        f_ambar = wb.add_format({"bg_color": "#FDEBD0", "font_color": "#9C640C"})
 
-            tit = h.get("titulo") or (f"{titulo} – {h['nombre']}" if titulo and titulo != h["nombre"] else str(h["nombre"]))
-            ws.write_string(0, 0, tit, f_tit)
-            ws.write_string(1, 0, filtros or "Sin filtros", f_sub)
-            ws.write_string(2, 0, (h.get("nota") + "  ·  " if h.get("nota") else "") +
-                            f"{len(d):,} filas  ·  Generado el {datetime.now():%d-%m-%Y %H:%M}".replace(",", "."), f_sub)
-
-            r0 = 4
+        def escribir_tabla(ws, d, r0, totales=True, semaforo=None):
+            """Escribe una tabla con encabezado en la fila r0. Devuelve (última fila, tipos, anchos)."""
             tipos = [_tipo_columna(d[c], c) for c in d.columns]
             ws.set_row(r0, 32)
             for j, c in enumerate(d.columns):
@@ -123,11 +111,22 @@ def excel_formato(hojas, titulo="", filtros=""):
                     else:
                         ws.write_string(rr, j, str(v), f)
 
+            # semáforo: {columna: (umbral_ámbar, umbral_rojo)}
+            if semaforo and len(d):
+                for col, (amb, rojo) in semaforo.items():
+                    if col in d.columns:
+                        j = list(d.columns).index(col)
+                        ws.conditional_format(r0 + 1, j, r0 + len(d), j,
+                                              {"type": "cell", "criteria": ">", "value": rojo, "format": f_rojo})
+                        ws.conditional_format(r0 + 1, j, r0 + len(d), j,
+                                              {"type": "cell", "criteria": "between", "minimum": amb + 1,
+                                               "maximum": rojo, "format": f_ambar})
+
             # fila de totales para las columnas de monto
             # (no se suman precios unitarios)
             montos = [j for j, t in enumerate(tipos) if t == "monto" and "unit" not in d.columns[j].lower() and "valor un" not in d.columns[j].lower()]
             ultima = r0 + len(d)
-            if montos and len(d) > 1 and h.get("totales", True):
+            if montos and len(d) > 1 and totales:
                 rt = ultima + 1
                 for j in range(len(d.columns)):
                     if j in montos:
@@ -136,9 +135,7 @@ def excel_formato(hojas, titulo="", filtros=""):
                         ws.write_string(rt, j, "Total" if j == 0 else "", f_tot_lbl)
                 ultima = rt
 
-            if len(d):
-                ws.autofilter(r0, 0, r0 + len(d), len(d.columns) - 1)
-
+            anchos = []
             for j, c in enumerate(d.columns):
                 if tipos[j] == "fecha":
                     ancho = 12
@@ -148,9 +145,86 @@ def excel_formato(hojas, titulo="", filtros=""):
                     if tipos[j] == "monto":
                         largo += 4
                     ancho = min(max(largo + 2, 9), 50)
+                anchos.append(ancho)
+            return ultima, tipos, anchos
+
+        def preparar(df):
+            d = df.copy()
+            if not isinstance(d.index, pd.RangeIndex):
+                d = d.reset_index(drop=d.index.name is None and not isinstance(d.index, pd.MultiIndex))
+            d.columns = [str(c) for c in d.columns]
+            return d
+
+        usados = set()
+        for h in hojas:
+            nombre = "".join(ch for ch in str(h["nombre"]) if ch not in '[]:*?/\\')[:31] or "Hoja"
+            while nombre in usados:
+                nombre = nombre[:28] + f"_{len(usados)}"
+            usados.add(nombre)
+            ws = wb.add_worksheet(nombre)
+
+            tit = h.get("titulo") or (f"{titulo} – {h['nombre']}" if titulo and titulo != h["nombre"] else str(h["nombre"]))
+            ws.write_string(0, 0, tit, f_tit)
+            ws.write_string(1, 0, filtros or "Sin filtros", f_sub)
+
+            # ---------------------------------------------
+            # Hoja de varias tablas apiladas (p. ej. Resumen):
+            # h["bloques"] = [{"titulo": ..., "df": ..., "grafico": "bar"|"pie"|None}, ...]
+            # ---------------------------------------------
+            if h.get("bloques"):
+                ws.write_string(2, 0, (h.get("nota") + "  ·  " if h.get("nota") else "") +
+                                f"Generado el {datetime.now():%d-%m-%Y %H:%M}", f_sub)
+                r = 4
+                anchos_max = {}
+                for b in h["bloques"]:
+                    d = preparar(b["df"])
+                    ws.write_string(r, 0, b.get("titulo", ""), f_bloque)
+                    r0 = r + 1
+                    ultima, tipos, anchos = escribir_tabla(ws, d, r0, totales=b.get("totales", False))
+                    for j, a in enumerate(anchos):
+                        anchos_max[j] = max(anchos_max.get(j, 0), a)
+                    if b.get("grafico") and len(d) and len(d.columns) >= 2:
+                        ch = wb.add_chart({"type": b["grafico"]})
+                        serie = {
+                            "name": d.columns[1],
+                            "categories": [nombre, r0 + 1, 0, r0 + len(d), 0],
+                            "values": [nombre, r0 + 1, 1, r0 + len(d), 1],
+                            "data_labels": {"value": True},
+                        }
+                        if b["grafico"] != "pie":
+                            serie["fill"] = {"color": AZUL}
+                        ch.add_series(serie)
+                        if b["grafico"] == "bar":
+                            ch.set_y_axis({"reverse": True})
+                        ch.set_title({"name": b.get("titulo", ""), "name_font": {"size": 11}})
+                        ch.set_legend({"none": b["grafico"] != "pie"})
+                        ch.set_size({"width": 480, "height": max(220, 26 * len(d) + 90)})
+                        ws.insert_chart(r0, len(d.columns) + 1, ch)
+                        r = max(ultima, r0 + max(11, int(len(d) * 1.4) + 4)) + 2
+                    else:
+                        r = ultima + 2
+                for j, a in anchos_max.items():
+                    ws.set_column(j, j, min(max(a, 12), 45) if j else max(a, 30))
+                ws.hide_gridlines(2)
+                ws.set_landscape()
+                ws.fit_to_pages(1, 0)
+                continue
+
+            d = preparar(h["df"])
+            ws.write_string(2, 0, (h.get("nota") + "  ·  " if h.get("nota") else "") +
+                            f"{len(d):,} filas  ·  Generado el {datetime.now():%d-%m-%Y %H:%M}".replace(",", "."), f_sub)
+
+            r0 = 4
+            ultima, tipos, anchos = escribir_tabla(ws, d, r0, totales=h.get("totales", True),
+                                                   semaforo=h.get("semaforo"))
+
+            if len(d):
+                ws.autofilter(r0, 0, r0 + len(d), len(d.columns) - 1)
+
+            for j, ancho in enumerate(h.get("anchos") and [h["anchos"].get(c, a) for c, a in zip(d.columns, anchos)] or anchos):
                 ws.set_column(j, j, ancho)
 
-            ws.freeze_panes(r0 + 1, 1 if len(d.columns) > 4 else 0)
+            ws.freeze_panes(r0 + 1, h.get("congelar_col", 1 if len(d.columns) > 4 else 0))
             ws.set_landscape()
             ws.fit_to_pages(1, 0)
             ws.repeat_rows(r0)

@@ -17,6 +17,7 @@ from kpis import *
 from ui import *
 from inventario import mostrar_inventario
 from hallazgos import mostrar_hallazgos
+from reportes import mostrar_reportes
 from excel_formato import excel_formato, MIME_XLSX
 
 # =====================================================
@@ -449,7 +450,7 @@ st.markdown(
 # TABS
 # =====================================================
 
-tab1,tab2,tab3,tab4,tab5,tab6 = st.tabs(
+tab1,tab2,tab3,tab4,tab_rep,tab5,tab6 = st.tabs(
 
     [
 
@@ -460,6 +461,8 @@ tab1,tab2,tab3,tab4,tab5,tab6 = st.tabs(
         "Análisis",
 
         "Base de datos",
+
+        "Reportes",
 
         "Inventario",
 
@@ -1651,6 +1654,14 @@ with tab4:
         mime=MIME_XLSX
 
     )
+
+# =====================================================
+# TAB REPORTES (descarga .xlsx por requisición)
+# =====================================================
+
+with tab_rep:
+
+    mostrar_reportes(df, comite_df, requisiciones_df, cotizaciones_df, detalle_oc_df)
 
 # =====================================================
 # TAB 5 - INVENTARIO (checklists de personas y móviles)
