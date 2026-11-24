@@ -141,6 +141,52 @@ def _resumen_comite(comite_df):
 
     g = c.groupby("LLave", sort=False)
 
+    # Lo aprobado: filas del acta con resultado "Aprobado" / "Aprobado parcial".
+    # Si el mismo detalle se aprueba en varios comités (re-aprobación) se toma
+    # la última vez; detalles distintos se suman. La hoja "Aprobado en comité"
+    # del Excel muestra todas las filas del acta.
+    ap = c[c["Resultado comité"].astype(str).str.strip().str.lower().str.startswith("aprob")].copy()
+
+    ap["_det"] = ap["Detalle cotización"].fillna("").astype(str).str.strip()
+
+    ap["_k"] = ap["_det"].str.lower().str.replace(r"\s+", " ", regex=True)
+
+    ap = ap.drop_duplicates(["LLave", "_k"], keep="last")
+
+    def _txt_aprob(gr):
+
+        partes = []
+
+        for _, r in gr.iterrows():
+
+            det = r["_det"] or "(sin detalle en acta)"
+
+            if str(r["Resultado comité"]).lower().startswith("aprobado parcial"):
+
+                det += " [parcial]"
+
+            if pd.notna(r["Monto neto comité"]):
+
+                det += f" – $ {r['Monto neto comité']:,.0f}".replace(",", ".")
+
+            partes.append(det)
+
+        return " | ".join(partes)
+
+    ga = ap.groupby("LLave", sort=False)
+
+    aprob = pd.DataFrame({
+
+        "Aprobado en comité": ga.apply(_txt_aprob, include_groups=False),
+
+        "Comité de aprobación": ga["Comité"].apply(lambda s: _unicos(s, ", ")),
+
+        "Fecha aprobación": ga["Fecha comité"].max(),
+
+        "Monto aprobado (neto)": ga["Monto neto comité"].sum(min_count=1),
+
+    })
+
     out = pd.DataFrame({
 
         "Primer comité": g["Comité"].first(),
@@ -159,7 +205,7 @@ def _resumen_comite(comite_df):
 
         "Historial comité": g.apply(_hist, include_groups=False),
 
-    }).reset_index()
+    }).join(aprob).reset_index()
 
     return out
 
@@ -315,6 +361,18 @@ def tabla_requisiciones(df, comite_df, cotizaciones_df, hoy=None):
 
     t["Comentario último comité"] = t["Comentario último comité"].replace("", pd.NA).fillna(t["Comentario comité"])
 
+    for col in ["Aprobado en comité", "Comité de aprobación", "Fecha aprobación", "Monto aprobado (neto)"]:
+
+        if col not in t:
+
+            t[col] = pd.NA
+
+    t["Monto aprobado sin OC (saldo)"] = (
+
+        t["Monto aprobado (neto)"] - t["Monto neto OC"].fillna(0)
+
+    ).where(t["Monto aprobado (neto)"].notna())
+
     # ---------- cotizaciones ----------
     if cotizaciones_df is not None and not cotizaciones_df.empty and "LLave" in cotizaciones_df:
 
@@ -360,6 +418,10 @@ def tabla_requisiciones(df, comite_df, cotizaciones_df, hoy=None):
     t["Tramo antigüedad"] = t["Antigüedad (días)"].apply(_tramo)
 
     t["Etapa actual"] = t.apply(_etapa, axis=1)
+
+    sin_det = t["Aprobado en comité"].isna() & (t["Etapa actual"] == "Aprobada, falta emitir OC")
+
+    t.loc[sin_det, "Aprobado en comité"] = "Aprobada según estado, sin detalle en el acta"
 
     # ---------- alertas ----------
     def alertas(r):
@@ -415,6 +477,8 @@ COLUMNAS_REPORTE = [
 
     "Último comité (acta)", "Fecha último comité (acta)", "N° de comités", "Resultado último comité",
 
+    "Aprobado en comité", "Comité de aprobación", "Fecha aprobación", "Monto aprobado (neto)",
+
     "Fecha primera OC", "Fecha límite de entrega", "Fecha de entrega",
 
     "Antigüedad (días)", "Tramo antigüedad", "Días req. → cotización", "Días cotización → 1er comité",
@@ -423,7 +487,7 @@ COLUMNAS_REPORTE = [
 
     "Ítems solicitados", "N° cotizaciones", "Proveedores cotizados", "Monto cotización",
 
-    "OC emitidas", "Proveedores OC", "Monto neto OC",
+    "OC emitidas", "Proveedores OC", "Monto neto OC", "Monto aprobado sin OC (saldo)",
 
     "Comentario último comité", "Historial comité", "Estado comité (resumen)",
 
@@ -487,6 +551,8 @@ def _conteo(t, col, nombre):
 
               **{"Monto cotización": ("Monto cotización", "sum")},
 
+              **{"Monto aprobado (neto)": ("Monto aprobado (neto)", "sum")},
+
               **{"Antigüedad promedio (días)": ("Antigüedad (días)", "mean")})
 
          .reset_index()
@@ -519,21 +585,41 @@ def generar_excel(t, tipo, filtros_txt, comite_df, requisiciones_df, cotizacione
 
         return "—" if pd.isna(v) else f"{v:.1f}"
 
+    def pesos(v):
+
+        return f"$ {v:,.0f}".replace(",", ".")
+
+    def n(v):
+
+        return f"{int(v):,}".replace(",", ".")
+
     ind = pd.DataFrame([
 
         ("Tipo de reporte", tipo),
 
         ("Fecha de corte", hoy.strftime("%d-%m-%Y")),
 
-        ("Requisiciones en el reporte", f"{len(t):,}".replace(",", ".")),
+        ("Requisiciones en el reporte", n(len(t))),
 
-        ("Requisiciones abiertas", f"{len(abiertas):,}".replace(",", ".")),
+        ("Requisiciones abiertas", n(len(abiertas))),
 
-        ("Con alguna alerta", f"{(t['Alertas'] != '').sum():,}".replace(",", ".")),
+        ("Requisiciones con aprobación en comité", n(t["Monto aprobado (neto)"].notna().sum())),
 
-        ("Monto cotizado total", f"$ {t['Monto cotización'].sum():,.0f}".replace(",", ".")),
+        ("Con alguna alerta", n((t["Alertas"] != "").sum())),
 
-        ("Antigüedad promedio (días)", prom("Antigüedad (días)")),
+        ("Monto cotizado total", pesos(t["Monto cotización"].sum())),
+
+        ("Monto aprobado en comité (neto)", pesos(t["Monto aprobado (neto)"].sum())),
+
+        ("Monto neto en OC emitidas", pesos(t["Monto neto OC"].sum())),
+
+        ("Monto aprobado sin OC (saldo)", pesos(t["Monto aprobado sin OC (saldo)"].clip(lower=0).sum())),
+
+    ], columns=["Indicador", "Valor"])
+
+    tiempos = pd.DataFrame([
+
+        ("Antigüedad promedio (días desde la requisición)", prom("Antigüedad (días)")),
 
         ("Antigüedad máxima (días)", "—" if t["Antigüedad (días)"].isna().all() else f"{int(t['Antigüedad (días)'].max())}"),
 
@@ -543,23 +629,27 @@ def generar_excel(t, tipo, filtros_txt, comite_df, requisiciones_df, cotizacione
 
         ("Promedio días en evaluación de comité", prom("Días en evaluación")),
 
+        ("Promedio días desde último comité (sin OC)", prom("Días desde último comité")),
+
         ("Promedio días requisición → OC", prom("Días req. → OC")),
 
-        ("Sin pasar nunca por comité", f"{(t['N° de comités'] == 0).sum()}"),
+        ("Sin pasar nunca por comité", n((t["N° de comités"] == 0).sum())),
 
-    ], columns=["Indicador", "Valor"])
+    ], columns=["Indicador de tiempo", "Valor"])
 
     orden_tramo = [n for *_, n in TRAMOS] + ["Sin fecha"]
 
     tramos = _conteo(t, "Tramo antigüedad", "Tramo de antigüedad")
 
-    tramos["_o"] = tramos["Tramo de antigüedad"].map({n: i for i, n in enumerate(orden_tramo)})
+    tramos["_o"] = tramos["Tramo de antigüedad"].map({k: i for i, k in enumerate(orden_tramo)})
 
     tramos = tramos.sort_values("_o").drop(columns="_o").reset_index(drop=True)
 
     alert = (t["Alertas"].str.split("; ").explode().replace("", pd.NA).dropna()
 
-             .str.replace(r"\d+", "N", regex=True).value_counts().rename_axis("Alerta")
+             .str.replace(r"vencida hace \d+ días", "vencida", regex=True)
+
+             .str.replace(r"Pasó \d+ veces", "Pasó 3 o más veces", regex=True).value_counts().rename_axis("Alerta")
 
              .reset_index(name="Requisiciones"))
 
@@ -567,13 +657,15 @@ def generar_excel(t, tipo, filtros_txt, comite_df, requisiciones_df, cotizacione
 
         {"titulo": "Indicadores", "df": ind},
 
-        {"titulo": "Por etapa actual", "df": _conteo(t, "Etapa actual", "Etapa actual"), "grafico": "bar", "totales": True},
+        {"titulo": "Por estado actual (etapa)", "df": _conteo(t, "Etapa actual", "Etapa actual"), "grafico": "bar", "totales": True},
+
+        {"titulo": "Por contrato", "df": _conteo(t, "Contrato", "Contrato"), "grafico": "bar", "totales": True},
+
+        {"titulo": "Por zona", "df": _conteo(t, "Zona", "Zona"), "grafico": "bar", "totales": True},
+
+        {"titulo": "Tiempos del proceso", "df": tiempos},
 
         {"titulo": "Por antigüedad", "df": tramos, "grafico": "column"},
-
-        {"titulo": "Por contrato", "df": _conteo(t, "Contrato", "Contrato"), "totales": True},
-
-        {"titulo": "Por zona", "df": _conteo(t, "Zona", "Zona"), "totales": True},
 
     ]
 
@@ -597,7 +689,7 @@ def generar_excel(t, tipo, filtros_txt, comite_df, requisiciones_df, cotizacione
 
                       "Días desde último comité": (7, 14), "Días cotización → 1er comité": (7, 14)},
 
-         "anchos": {"Historial comité": 60, "Alertas": 34, "Comentario último comité": 40,
+         "anchos": {"Historial comité": 60, "Aprobado en comité": 50, "Alertas": 34, "Comentario último comité": 40,
 
                     "Comentario gestión": 34, "Comentario resumen": 34, "Proveedores cotizados": 34},
 
@@ -628,6 +720,28 @@ def generar_excel(t, tipo, filtros_txt, comite_df, requisiciones_df, cotizacione
         hojas.append({"nombre": "Historial comité", "df": hc.sort_values(["N° de requisición", "Fecha comité"]),
 
                       "nota": "Todas las pasadas por comité de estas requisiciones", "totales": False})
+
+    if not hc.empty:
+
+        apr = hc[hc["Resultado comité"].astype(str).str.strip().str.lower().str.startswith("aprob")]
+
+        if not apr.empty:
+
+            info = t.set_index("N° requisición")[["Contrato", "Zona", "Solicitante", "Etapa actual"]]
+
+            apr = apr.join(info, on="N° de requisición")
+
+            cols = ["N° de requisición", "Contrato", "Zona", "Solicitante", "Comité", "Fecha comité",
+
+                    "Resultado comité", "Detalle cotización", "Monto neto comité", "Comentario comité", "Etapa actual"]
+
+            hojas.insert(2, {"nombre": "Aprobado en comité",
+
+                             "df": apr[[c for c in cols if c in apr]].sort_values(["N° de requisición", "Fecha comité"]),
+
+                             "nota": "Lo aprobado (total o parcial) en el acta del comité, con su monto neto",
+
+                             "anchos": {"Detalle cotización": 50, "Comentario comité": 40}})
 
     it = sub(requisiciones_df)
 
@@ -698,7 +812,9 @@ def mostrar_reportes(df, comite_df, requisiciones_df, cotizaciones_df, detalle_o
 
          "detalle": f"Máx. {int(t['Antigüedad (días)'].max())} días" if t["Antigüedad (días)"].notna().any() else ""},
 
-        {"etiqueta": "Monto cotizado", "valor": f"$ {t['Monto cotización'].sum():,.0f}".replace(",", ".")},
+        {"etiqueta": "Monto aprobado en comité", "valor": f"$ {t['Monto aprobado (neto)'].sum():,.0f}".replace(",", "."),
+
+         "detalle": f"Cotizado: $ {t['Monto cotización'].sum():,.0f}".replace(",", ".")},
 
         {"etiqueta": "Con alertas", "valor": f"{con_alerta}", "tono": "danger" if con_alerta else "ok"},
 
@@ -711,6 +827,8 @@ def mostrar_reportes(df, comite_df, requisiciones_df, cotizaciones_df, detalle_o
         "Fecha Cotización", "Primer comité", "Fecha primer comité", "Último comité (acta)",
 
         "Fecha último comité (acta)", "N° de comités", "Resultado último comité",
+
+        "Aprobado en comité", "Monto aprobado (neto)",
 
         "Antigüedad (días)", "Días en evaluación", "Monto cotización", "Alertas", "Comentario último comité",
 
@@ -725,6 +843,8 @@ def mostrar_reportes(df, comite_df, requisiciones_df, cotizaciones_df, detalle_o
         column_config={
 
             "Monto cotización": st.column_config.NumberColumn(format="$ %d"),
+
+            "Monto aprobado (neto)": st.column_config.NumberColumn(format="$ %d"),
 
             "Fecha Requisición": st.column_config.DateColumn(format="DD-MM-YYYY"),
 
